@@ -1,14 +1,14 @@
 #pragma once
 
-#include "FmsQueue.h"
+#include "Queue.h"
 #include "request.h"
 
 
 template <typename T>
 class PriorityQueue {
 private:
-    fms::FmsQueue<T> low_queue;
-    fms::FmsQueue<T> high_queue;
+    orch::FmsQueue<T> low_queue;
+    orch::FmsQueue<T> high_queue;
 public:
     bool Empty()const;
     void Push(const Request&);
