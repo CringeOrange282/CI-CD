@@ -14,6 +14,10 @@ public:
     void Push(const Request&);
     std::optional<Request> Pop();
     std::optional<Request> WaitAndPop(std::chrono::milliseconds timeout);
+    
+    size_t sizeTotal()const;
+    size_t sizeHigh()const;
+    size_t sizeLow()const;
 };
 
 template<typename T>
@@ -52,4 +56,19 @@ std::optional<Request> PriorityQueue<T>::WaitAndPop(std::chrono::milliseconds ti
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     return std::nullopt;
+}
+
+template<typename T>
+size_t PriorityQueue<T>::sizeTotal()const {
+    return high_queue.Size() + low_queue.Size();
+}
+
+template<typename T>
+size_t PriorityQueue<T>::sizeHigh()const {
+    return high_queue.Size();
+}
+
+template<typename T>
+size_t PriorityQueue<T>::sizeLow()const {
+    return low_queue.Size();
 }
