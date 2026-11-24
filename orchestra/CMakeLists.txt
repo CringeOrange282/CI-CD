@@ -1,5 +1,8 @@
 set(SOURCES
     src/main.cpp
+    src/AsyncComponentBase.cpp
+    src/Logger.cpp
+    src/Utils.cpp
 )
 
 add_executable(orchestra ${SOURCES})
