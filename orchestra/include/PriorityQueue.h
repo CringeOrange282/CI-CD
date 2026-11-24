@@ -3,12 +3,12 @@
 #include "Queue.h"
 #include "request.h"
 
-
+namespace orch{
 template <typename T>
 class PriorityQueue {
 private:
-    orch::Queue<T> low_queue;
-    orch::Queue<T> high_queue;
+    Queue<T> low_queue;
+    Queue<T> high_queue;
 public:
     bool Empty()const;
     void Push(const Request&);
@@ -71,4 +71,5 @@ size_t PriorityQueue<T>::sizeHigh()const {
 template<typename T>
 size_t PriorityQueue<T>::sizeLow()const {
     return low_queue.Size();
+}
 }
