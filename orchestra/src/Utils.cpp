@@ -4,6 +4,7 @@
 #include <cctype>
 #include <ctime>
 #include <iomanip>
+#include <time.h>
 #include <unordered_map>
 #include <fstream>
 #include <thread>
@@ -47,7 +48,7 @@ std::string FormatDate(const std::chrono::time_point<std::chrono::system_clock>&
 {
     std::time_t ctime = std::chrono::system_clock::to_time_t(time_point);
     std::tm time_info;
-    localtime_r(&ctime, &time_info);
+    localtime_s(&time_info, &ctime);
     
     std::stringstream ss;
     ss << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S");

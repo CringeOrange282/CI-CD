@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
-#include <unistd.h>
+//#include <unistd.h>
 
 namespace orch {
     
@@ -33,16 +33,16 @@ namespace orch {
     void Logger::PrintMessage(LogLevel level, const std::string& message) const
     {
         auto now = std::chrono::system_clock::now();
-        pid_t pid = getpid();
+        //pid_t pid = getpid();
 
         std::stringstream ss;
-        ss << utils::StringFromParts(
-            '[', utils::FormatDate(now), "] ", 
-            pid, ' ', 
-            LogLevelToString(level), ' ', 
-            _name, ": ", message
-        );
-        ss << std::endl;
+        //ss << utils::StringFromParts(
+        //    '[', utils::FormatDate(now), "] ", 
+        //    pid, ' ', 
+        //    LogLevelToString(level), ' ', 
+        //    _name, ": ", message
+        //);
+        //ss << std::endl;
             
         std::string output = ss.str();
         std::cout.write(output.c_str(), output.size());
