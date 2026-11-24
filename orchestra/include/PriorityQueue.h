@@ -7,8 +7,8 @@
 template <typename T>
 class PriorityQueue {
 private:
-    orch::FmsQueue<T> low_queue;
-    orch::FmsQueue<T> high_queue;
+    orch::Queue<T> low_queue;
+    orch::Queue<T> high_queue;
 public:
     bool Empty()const;
     void Push(const Request&);
