@@ -1,5 +1,6 @@
 set(SOURCES
     src/main.cpp
+    src/Service.cpp
     src/AsyncComponentBase.cpp
     src/Logger.cpp
     src/Utils.cpp
