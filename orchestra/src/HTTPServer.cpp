@@ -32,12 +32,17 @@ namespace orch
         server.Post("/result", [&](const auto& req, auto& res) {
             json result;
             std::string key;
+            std::optional<std::string> attempt_id;
             std::optional<std::string> error;
             try {
                 result = json::parse(req.body);
                 key = result.at("key").get<std::string>();
+                if (result.contains("attempt_id")) {
+                    attempt_id = result.at("attempt_id").get<std::string>();
+                }
                 const auto status = result.at("status").get<std::string>();
-                if (key.empty() || status.empty()) {
+                if (key.empty() || status.empty() ||
+                    (attempt_id && attempt_id->empty())) {
                     res.status = httplib::StatusCode::BadRequest_400;
                     return;
                 }
@@ -50,9 +55,9 @@ namespace orch
             }
 
             if (error) {
-                response_handler.HandleExternalError(key, *error);
+                response_handler.HandleExternalError(key, attempt_id, *error);
             } else {
-                response_handler.HandleExternalSuccess(key, result);
+                response_handler.HandleExternalSuccess(key, attempt_id, result);
             }
             res.status = httplib::StatusCode::OK_200;
         });

@@ -26,6 +26,7 @@ python3 -u - <<'PY'
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Event
+from urllib.request import Request, urlopen
 
 priority_started = Event()
 priority_release = Event()
@@ -63,6 +64,15 @@ class Receiver(BaseHTTPRequestHandler):
             if not priority_release.wait(timeout=25):
                 self.reply(504)
                 return
+            result = json.dumps({
+                "key": payload["dedup_key"],
+                "attempt_id": payload["attempt_id"],
+                "status": "Approve",
+            }).encode()
+            callback = Request("http://127.0.0.1:8080/result", data=result,
+                               headers={"Content-Type": "application/json"})
+            with urlopen(callback, timeout=5):
+                pass
         self.reply(200)
 
 
@@ -116,6 +126,7 @@ Orchestra отвечает `HTTP 200`. Поле `enqueued` подтвержда�
 ```json
 {
   "dedup_key": "[\"calculate-risk\",\"portfolio\",\"2026-11-25\"]",
+  "attempt_id": "2741915-3975313-1",
   "input_data": {
     "date": "2026-11-25",
     "doc": "portfolio",
@@ -221,4 +232,4 @@ Orchestra отвечает `HTTP 200` со статусом `failed`. В Python-
 4. `priority-low-1` — первая ожидающая задача с `auto`.
 5. `priority-low-2` — вторая ожидающая задача с `auto`.
 
-В этом сценарии проверяется порядок POST от Sender, поэтому достаточно ответов приёмника. Для повторного прогона с теми же ключами перезапустите оба процесса. После проверки остановите их сочетанием `Ctrl+C`.
+Для `priority-gate` приёмник отправляет callback и освобождает слот. Остальные четыре задачи занимают четыре слота с настройками по умолчанию. Для повторного прогона с теми же ключами перезапустите оба процесса. После проверки остановите их сочетанием `Ctrl+C`.

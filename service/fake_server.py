@@ -3,7 +3,7 @@ import os
 import time
 
 import httpx
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel, FiniteFloat
 
 app = FastAPI()
@@ -13,6 +13,7 @@ callback_url = os.environ.get(
 )
 active_requests = {}
 complete_requests = {}
+pending_cancellations = set()
 
 
 class InputData(BaseModel):
@@ -23,12 +24,19 @@ class InputData(BaseModel):
 
 class CalculateRequest(BaseModel):
     dedup_key: str
+    attempt_id: str | None = None
     input_data: InputData
     name_process: str
 
 
-async def calculate(request: CalculateRequest):
+class CancelRequest(BaseModel):
+    dedup_key: str
+    attempt_id: str
+
+
+async def calculate(request: CalculateRequest, started_at: float):
     key = request.dedup_key
+    attempt = (key, request.attempt_id)
     await asyncio.sleep(5)
 
     amount = request.input_data.portfolio_sum
@@ -39,10 +47,12 @@ async def calculate(request: CalculateRequest):
         status = "Disapprove" if risk_score < 0.5 else "Approve"
         result = {"key": key, "status": status, "risk_score": risk_score}
 
-    task = active_requests.pop(key)
-    complete_requests[key] = {
+    active_requests.pop(attempt)
+    if request.attempt_id is not None:
+        result["attempt_id"] = request.attempt_id
+    complete_requests[attempt] = {
         "result": result,
-        "time_complete": time.monotonic() - task["start_time_process"],
+        "time_complete": time.monotonic() - started_at,
     }
     async with httpx.AsyncClient() as client:
         response = await client.post(callback_url, json=result)
@@ -50,22 +60,35 @@ async def calculate(request: CalculateRequest):
 
 
 @app.post("/submit")
-async def add_request(request: CalculateRequest, tasks: BackgroundTasks):
-    key = request.dedup_key
-    if key not in active_requests:
-        active_requests[key] = {
-            "start_time_process": time.monotonic(),
-            "status": "processing",
-        }
-        tasks.add_task(calculate, request)
+async def add_request(request: CalculateRequest):
+    attempt = (request.dedup_key, request.attempt_id)
+    if attempt in pending_cancellations:
+        pending_cancellations.remove(attempt)
+        return {"status": "cancelled"}
+    if attempt not in active_requests:
+        active_requests[attempt] = asyncio.create_task(
+            calculate(request, time.monotonic())
+        )
     return {"status": "accepted"}
+
+
+@app.post("/cancel")
+async def cancel_request(request: CancelRequest):
+    attempt = (request.dedup_key, request.attempt_id)
+    task = active_requests.pop(attempt, None)
+    if task is not None:
+        task.cancel()
+    elif attempt not in complete_requests:
+        # Отмена может прийти по другому соединению раньше запроса на запуск.
+        pending_cancellations.add(attempt)
+    return {"status": "cancelled"}
 
 
 @app.get("/stats")
 async def stats():
     return {
         "count_tasks": len(active_requests),
-        "tasks": list(active_requests),
+        "tasks": [key for key, _ in active_requests],
         "count_complete_tasks": len(complete_requests),
-        "complete_tasks": list(complete_requests)[-10:],
+        "complete_tasks": [key for key, _ in list(complete_requests)[-10:]],
     }
