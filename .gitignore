@@ -1,3 +1,6 @@
+# Docker
+.devcontainer/
+
 ##### Windows
 # Windows thumbnail cache files
 Thumbs.db
