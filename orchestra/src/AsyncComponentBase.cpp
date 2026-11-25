@@ -1,6 +1,5 @@
 #include "AsyncComponentBase.h"
 #include "Utils.h"
-
 #include <stdexcept>
 
 namespace orch {
