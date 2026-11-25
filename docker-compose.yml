@@ -1,0 +1,22 @@
+services:
+  calc-service:
+    build: .
+    container_name: orchestra_calc_service
+    command: uvicorn service.fake_server:app --host 0.0.0.0 --port 9000
+    environment:
+      - ORCHESTRA_CALLBACK_URL=http://orchestra:8080/result
+    ports:
+      - "9000:9000"
+
+  orchestra:
+    build: .
+    container_name: orchestra_app
+    depends_on:
+      - calc-service
+    volumes:
+      - ./data.json:/app/data.json
+    environment:
+      - ORCHESTRA_DATA_FILE=/app/data.json
+    command: ./build/bin/debug/orchestra 0.0.0.0 8080 http://calc-service:9000 /submit
+    ports:
+      - "8080:8080"

@@ -1,0 +1,38 @@
+[
+    {
+        "document": "portfolio",
+        "date": "2026-11-25",
+        "content": {
+            "portfolio_sum": 30000,
+            "currency": "RUB",
+            "segment": "retail"
+        }
+    },
+    {
+        "document": "portfolio",
+        "date": "2026-11-24",
+        "content": {
+            "portfolio_sum": 45000,
+            "currency": "RUB",
+            "segment": "retail"
+        }
+    },
+    {
+        "document": "corporate_loans",
+        "date": "2026-11-25",
+        "content": {
+            "portfolio_sum": 1200000,
+            "currency": "USD",
+            "segment": "corporate"
+        }
+    },
+    {
+        "document": "treasury_bonds",
+        "date": "2026-11-20",
+        "content": {
+            "portfolio_sum": 500000,
+            "currency": "RUB",
+            "segment": "market"
+        }
+    }
+]
