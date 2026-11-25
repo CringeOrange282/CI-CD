@@ -3,28 +3,13 @@
 #include "ExternalResponseCache.h"
 #include "Loggable.h"
 
-
+#include "Interfaces.h"
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace orch {
-
-// Контракты соседних модулей (список подписавшихся и отправка на фронт)
-class IRecipientRegistry {
-public:
-  virtual ~IRecipientRegistry() = default;
-  // Извлекает и удаляет всех пользователей, подписавшихся на данный dedup_key
-  virtual std::vector<std::string>
-  ExtractSubscribers(const std::string &dedup_key) = 0;
-};
-
-class IUserNotifier {
-public:
-  virtual ~IUserNotifier() = default;
-  virtual void Notify(const std::string &author, const json &payload) = 0;
-};
 
 // =========================================================================
 // МОДУЛЬ РАБОТЫ С ОТВЕТАМИ ОТ ВНЕШНЕГО СЕРВИСА

@@ -73,7 +73,7 @@ void RequestChecker::PrepareAndEnqueueTask(Request &req,
 
 void RequestChecker::NotifyAllWaiting(const std::string &dedup_key,
                                       const json &payload) {
-  auto waiting_authors = _recipient_registry->ExtractAll(dedup_key);
+  auto waiting_authors = _recipient_registry->ExtractSubscribers(dedup_key);
   for (const auto &author : waiting_authors) {
     _user_notifier->Notify(author, payload);
   }
