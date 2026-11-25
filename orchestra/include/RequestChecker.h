@@ -5,10 +5,11 @@
 #include <optional>
 
 #include "AsyncComponentBase.h"
+#include "Interfaces.h"
 #include "PriorityQueue.h"
 #include "Queue.h"
 #include "request.h"
-#include "Interfaces.h"
+
 
 namespace orch {
 
@@ -24,8 +25,8 @@ struct ProcessTask {
 // =========================================================================
 
 class RequestChecker : public AsyncComponentBase {
- public:
-  RequestChecker(Logger&& logger,
+public:
+  RequestChecker(Logger &&logger,
                  std::shared_ptr<PriorityQueue<Request>> incoming_queue,
                  std::shared_ptr<Queue<ProcessTask>> process_queue,
                  std::shared_ptr<IResponseCache> response_cache,
@@ -36,17 +37,15 @@ class RequestChecker : public AsyncComponentBase {
 
   ~RequestChecker() override = default;
 
- protected:
+protected:
   void ThreadJob() override;
 
- private:
-  void HandleRequest(Request& req);
-  bool TryServeFromCacheOrJoin(const Request& req,
-                               const std::string& dedup_key);
-  void PrepareAndEnqueueTask(Request& req, const std::string& dedup_key);
-  void NotifyAllWaiting(const std::string& dedup_key, const json& payload);
+private:
+  void HandleRequest(Request &req);
+  void PrepareAndEnqueueTask(Request &req, const std::string &dedup_key);
+  void NotifyAllWaiting(const std::string &dedup_key, const json &payload);
 
- private:
+private:
   std::shared_ptr<PriorityQueue<Request>> _incoming_queue;
   std::shared_ptr<Queue<ProcessTask>> _process_queue;
 
@@ -59,4 +58,4 @@ class RequestChecker : public AsyncComponentBase {
   std::mutex _state_mutex;
 };
 
-}  // namespace orch
+} // namespace orch
