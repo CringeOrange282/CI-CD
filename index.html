@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>RiskOrchestrator</title>
+<style>
+  :root {
+    --bg: #eef7fa; --panel: #d5f2fa; --card: #e5f5f9; --row: #dcf3f9;
+    --cyan: #18b8e8; --cyan-hover: #12a3cf; --text: #1a242b; --muted: #5a6b75;
+    --green: #2ecc71; --red: #e74c3c; --red-soft: #f5b7b1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: #1e272e; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
+
+  .window { width: 1020px; min-height: 640px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.4); display: flex; flex-direction: column; color: var(--text); }
+  .titlebar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: var(--bg); border-bottom: 1px solid #cce5ed; font-weight: 600; }
+  .win-btns { display: flex; gap: 16px; font-size: 16px; color: var(--text); }
+
+  .main { display: flex; flex: 1; padding: 14px 20px 20px; gap: 20px; }
+  .sidebar { width: 240px; display: flex; flex-direction: column; gap: 14px; }
+  .status-badge { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding-left: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+  .dot.offline { background: var(--red); }
+
+  .nav { background: var(--panel); border-radius: 12px; overflow: hidden; }
+  .nav-item { padding: 12px 16px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 10px; transition: .15s; }
+  .nav-item.active { background: var(--cyan); color: #fff; }
+
+  .content { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .header-bar { background: var(--panel); padding: 10px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+
+  .form-card { background: var(--card); border-radius: 12px; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .field-row { background: var(--row); padding: 10px 16px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .field-row input { border: none; background: transparent; text-align: right; font-size: 15px; font-weight: 600; color: var(--text); outline: none; width: 240px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; justify-content: center; }
+  .chip { border: 1px solid #b5e2f0; background: #eef9fc; padding: 5px 11px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: .15s; color: var(--text); }
+  .chip:hover { border-color: var(--cyan); }
+  .chip.active { background: var(--cyan); color: #fff; border-color: var(--cyan); font-weight: 600; }
+
+  .seg-group { background: var(--row); padding: 10px 16px; border-radius: 10px; text-align: center; }
+  .seg-title { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+  .seg-btns { display: flex; gap: 8px; background: #cbeaf3; padding: 4px; border-radius: 10px; }
+  .seg-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: 600; color: var(--text); transition: .15s; }
+  .seg-btn.active { background: var(--cyan); color: #fff; }
+  .risk-desc { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .btn-submit { background: #a7e4f6; border: none; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: .15s; }
+  .btn-submit:hover { background: var(--cyan); color: #fff; }
+
+  .section { background: var(--card); border-radius: 12px; padding: 12px 16px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
+  .btn-sm { border: none; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-red { background: var(--red-soft); color: #78281f; }
+  .btn-cyan { background: #a7e4f6; color: var(--text); }
+  .tbl-head, .tbl-row { display: grid; grid-template-columns: 34px 1.35fr 1fr 0.9fr 1.15fr 24px; align-items: center; padding: 6px 10px; font-size: 13px; }
+  .tbl-head { color: var(--muted); font-weight: 600; }
+  .tbl-row { background: var(--row); border-radius: 8px; margin-bottom: 5px; font-weight: 500; }
+  .empty-msg { font-size: 13px; color: var(--muted); padding: 8px 10px; text-align: center; }
+
+  .radio { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #95a5a6; cursor: pointer; justify-self: end; }
+  .radio.checked { border-color: var(--red); background: var(--red); }
+  .radio.checked.cyan { border-color: var(--cyan); background: var(--cyan); }
+
+  .toast { position: fixed; bottom: 20px; right: 20px; background: #1a242b; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transition: .25s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <div class="titlebar">
+    <span>RiskOrchestrator</span>
+    <span id="topUserBadge">👤 a.ivanov (Analyst)</span>
+    <div class="win-btns"><span>—</span><span>□</span><span>✕</span></div>
+  </div>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="status-badge"><span class="dot offline" id="clusterDot"></span><span id="clusterText">Проверка связи...</span></div>
+      <nav class="nav" id="navMenu"></nav>
+    </aside>
+
+    <section class="content" id="viewContainer"></section>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'risk_orchestrator_state_v3';
+
+const USERS = ['a.ivanov', 's.petrov', 'm.sharov', 'm.zubenko', 'n.zolotykh'];
+
+const DOCUMENTS = [
+  { id: 'portfolio', label: 'portfolio (Розничный портфель)', defaultRisk: 'Кредитный' },
+  { id: 'corporate_loans', label: 'corporate_loans (Корп. кредиты)', defaultRisk: 'Кредитный' },
+  { id: 'retail_credits', label: 'retail_credits (Потреб. кредиты)', defaultRisk: 'Кредитный' },
+  { id: 'treasury_bonds', label: 'treasury_bonds (Облигации)', defaultRisk: 'Рыночный' },
+  { id: 'fx_positions', label: 'fx_positions (Валютные позиции)', defaultRisk: 'Рыночный' },
+  { id: 'liquidity_buffer', label: 'liquidity_buffer (Буфер ликвидности)', defaultRisk: 'Ликвидности' }
+];
+
+const RISK_TYPES = {
+  'Кредитный': { code: 'credit-risk', desc: 'Оценка вероятности дефолта заёмщиков и расчёт резервов по кредитному портфелю' },
+  'Рыночный': { code: 'market-risk', desc: 'Оценка потерь от колебаний курсов валют, котировок ценных бумаг и ставок (VaR)' },
+  'Ликвидности': { code: 'liquidity-risk', desc: 'Проверка достаточности свободных денежных средств для покрытия обязательств банка' }
+};
+
+const DEMO_DATA = {
+  active: [
+    { num: 13, id: 'portfolio', author: 'a.ivanov', date: '2026-11-25', processCode: 'credit-risk', prio: 'Выс.', status: '⏳ В очереди', selected: false },
+    { num: 12, id: 'treasury_bonds', author: 's.petrov', date: '2026-11-25', processCode: 'market-risk', prio: 'Низ.', status: '⚡ Вып.', selected: false }
+  ],
+  aborted: [
+    { num: 5, id: 'portfolio', author: 'm.sharov', date: '2026-11-20', processCode: 'credit-risk', reason: 'Нет данных в БД ⛔', selected: false }
+  ],
+  completed: [
+    { num: 1, id: 'corporate_loans', author: 'a.ivanov', finished: '2026-11-25 15:55', riskScore: 0.99 }
+  ]
+};
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && saved.form) return saved;
+  } catch (e) {}
+  return {
+    apiUrl: 'http://localhost:8080',
+    mode: 'real', // 'real' | 'demo'
+    tab: 'dashboard',
+    counter: 14,
+    serverOnline: false,
+    form: {
+      author: 'a.ivanov',
+      document: 'portfolio',
+      date: '2026-11-25',
+      process: 'Кредитный',
+      priority: 'manual'
+    },
+    active: [],
+    aborted: [],
+    completed: []
+  };
+}
+
+let state = loadState();
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+const showToast = (msg) => {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3200);
+};
+
+function formatNow() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0') + ' ' +
+    String(d.getHours()).padStart(2, '0') + ':' +
+    String(d.getMinutes()).padStart(2, '0');
+}
+
+async function sendTaskToBackend(taskParams) {
+  const payload = {
+    id: 'ui-' + Date.now(),
+    author: taskParams.author,
+    date: taskParams.date,
+    document: taskParams.document,
+    process: taskParams.processCode,
+    priority: taskParams.priority
+  };
+
+  if (state.mode === 'demo') {
+    const num = state.counter++;
+    state.active.unshift({
+      num,
+      id: payload.document,
+      author: payload.author,
+      date: payload.date,
+      processCode: payload.process,
+      priority: payload.priority,
+      prio: payload.priority === 'manual' ? 'Выс.' : 'Низ.',
+      status: '⚡ Вып. (Демо)',
+      selected: false
+    });
+    saveState();
+    showToast('Демо-режим: задача добавлена в очередь');
+    state.tab = 'dashboard';
+    render();
+    setTimeout(() => {
+      const idx = state.active.findIndex(t => t.num === num);
+      if (idx !== -1) {
+        const done = state.active.splice(idx, 1)[0];
+        state.completed.unshift({
+          num: done.num,
+          id: done.id,
+          author: done.author,
+          finished: formatNow(),
+          riskScore: 0.75,
+          rawResult: { status: 'Approve', risk_score: 0.75, mode: 'demo' }
+        });
+        saveState();
+        render();
+        showToast(`Расчёт по ${done.id} завершён (demo)`);
+      }
+    }, 4000);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${state.apiUrl}/add_task`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const num = state.counter++;
+
+    if (data.status === 'cached') {
+      const score = data.result?.risk_score ?? 'готово';
+      state.completed.unshift({
+        num,
+        id: payload.document,
+        author: payload.author,
+        finished: formatNow() + ' (кэш)',
+        riskScore: score,
+        rawResult: data.result
+      });
+      showToast(`Взято из кэша! risk_score = ${score}`);
+    } else if (data.status === 'failed') {
+      state.aborted.unshift({
+        num,
+        id: payload.document,
+        author: payload.author,
+        date: payload.date,
+        processCode: payload.process,
+        priority: payload.priority,
+        reason: data.error || 'Ошибка БД ⛔',
+        selected: false
+      });
+      showToast(`Ошибка: ${data.error || 'запись не найдена в data.json'}`);
+    } else {
+      state.active.unshift({
+        num,
+        id: payload.document,
+        author: payload.author,
+        date: payload.date,
+        processCode: payload.process,
+        priority: payload.priority,
+        prio: payload.priority === 'manual' ? 'Выс.' : 'Низ.',
+        status: data.status === 'in_progress' ? '🔗 Подписка' : '⏳ В очереди',
+        selected: false
+      });
+      showToast(`Задача принята (${data.status})`);
+    }
+
+    saveState();
+    state.tab = 'dashboard';
+    render();
+  } catch (e) {
+    showToast('Ошибка связи с сервером (проверьте Docker и CORS)');
+  }
+}
+
+async function pollServerAndTasks() {
+  if (state.mode === 'demo') {
+    state.serverOnline = true;
+    updateStatusBadge();
+    return;
+  }
+
+  try {
+    const qRes = await fetch(`${state.apiUrl}/queue`);
+    if (!qRes.ok) throw new Error();
+    const qData = await qRes.json();
+    state.serverOnline = true;
+    updateStatusBadge();
+
+    const queuedKeys = qData.keys || [];
+    let changed = false;
+
+    for (let i = state.active.length - 1; i >= 0; i--) {
+      const task = state.active[i];
+      const expectedKey = JSON.stringify([task.processCode, task.id, task.date]);
+
+      if (!queuedKeys.includes(expectedKey) && task.status === '⏳ В очереди') {
+        task.status = '⚡ Вып.';
+        changed = true;
+      }
+
+      // Проверяем, не появился ли результат в кэше
+      const checkRes = await fetch(`${state.apiUrl}/add_task`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: 'poll-' + task.num,
+          author: task.author,
+          date: task.date,
+          document: task.id,
+          process: task.processCode,
+          priority: task.priority || 'manual'
+        })
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.status === 'cached') {
+          state.active.splice(i, 1);
+          const score = checkData.result?.risk_score ?? 'OK';
+          state.completed.unshift({
+            num: task.num,
+            id: task.id,
+            author: task.author,
+            finished: formatNow(),
+            riskScore: score,
+            rawResult: checkData.result
+          });
+          changed = true;
+          showToast(`Расчёт #${task.num} (${task.id}) завершён! score: ${score}`);
+        }
+      }
+    }
+
+    if (changed) {
+      saveState();
+      if (state.tab === 'dashboard') render();
+    }
+  } catch (e) {
+    state.serverOnline = false;
+    updateStatusBadge();
+  }
+}
+
+function updateStatusBadge() {
+  const dot = document.getElementById('clusterDot');
+  const txt = document.getElementById('clusterText');
+  if (state.mode === 'demo') {
+    dot.classList.remove('offline');
+    txt.textContent = 'Демо-режим (оффлайн)';
+  } else if (state.serverOnline) {
+    dot.classList.remove('offline');
+    txt.textContent = 'Кластер стабилен';
+  } else {
+    dot.classList.add('offline');
+    txt.textContent = 'Сервер недоступен';
+  }
+}
+
+function submitForm() {
+  const riskObj = RISK_TYPES[state.form.process] || RISK_TYPES['Кредитный'];
+  sendTaskToBackend({
+    author: state.form.author,
+    document: state.form.document,
+    date: state.form.date,
+    processCode: riskObj.code,
+    priority: state.form.priority
+  });
+}
+
+function cancelSelected() {
+  const toCancel = state.active.filter(r => r.selected);
+  if (!toCancel.length) return;
+  state.active = state.active.filter(r => !r.selected);
+  toCancel.forEach(r => {
+    state.aborted.unshift({
+      num: r.num,
+      id: r.id,
+      author: r.author,
+      date: r.date,
+      processCode: r.processCode,
+      priority: r.priority,
+      reason: 'Руч. отмена ⛔',
+      selected: false
+    });
+  });
+  saveState();
+  render();
+}
+
+function restartSelected() {
+  const toRestart = state.aborted.filter(r => r.selected);
+  if (!toRestart.length) return;
+  state.aborted = state.aborted.filter(r => !r.selected);
+  saveState();
+  toRestart.forEach(r => {
+    sendTaskToBackend({
+      author: r.author,
+      document: r.id,
+      date: r.date || '2026-11-25',
+      processCode: r.processCode || 'credit-risk',
+      priority: r.priority || 'manual'
+    });
+  });
+}
+
+function downloadResults() {
+  const blob = new Blob([JSON.stringify(state.completed, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `risk_results_${state.form.date}.json`;
+  a.click();
+}
+
+function switchMode(newMode) {
+  state.mode = newMode;
+  if (newMode === 'demo' && state.active.length === 0 && state.completed.length === 0) {
+    state.active = JSON.parse(JSON.stringify(DEMO_DATA.active));
+    state.aborted = JSON.parse(JSON.stringify(DEMO_DATA.aborted));
+    state.completed = JSON.parse(JSON.stringify(DEMO_DATA.completed));
+  }
+  saveState();
+  pollServerAndTasks();
+  render();
+}
+
+function resetHistory() {
+  state.active = [];
+  state.aborted = [];
+  state.completed = [];
+  state.counter = 1;
+  saveState();
+  render();
+  showToast('Локальная история очищена');
+}
+
+function renderNav() {
+  document.getElementById('topUserBadge').textContent = `👤 ${state.form.author} (Analyst)`;
+  const items = [
+    { id: 'dashboard', label: '📊 Дашборд очередей' },
+    { id: 'new', label: '🔵 Новая задача' },
+    { id: 'settings', label: '⚙️ Настройки' }
+  ];
+  document.getElementById('navMenu').innerHTML = items.map(i =>
+    `<div class="nav-item ${state.tab === i.id ? 'active' : ''}" onclick="state.tab='${i.id}';saveState();render()">${i.label}</div>`
+  ).join('');
+}
+
+function renderDashboard() {
+  return `
+    <div class="header-bar"><span>Центр управления процессами</span><span>${state.form.date}</span></div>
+
+    <div class="section">
+      <div class="sec-head"><span>Активные запуски (${state.active.length})</span><button class="btn-sm btn-red" onclick="cancelSelected()">Отменить выбр.</button></div>
+      <div class="tbl-head"><span>№</span><span>Документ</span><span>Автор</span><span>Приоритет</span><span>Статус</span><span></span></div>
+      ${state.active.length ? state.active.map((r, i) => `
+        <div class="tbl-row">
+          <span>${r.num}</span><span>${r.id}</span><span>👤 ${r.author}</span><span>${r.prio}</span><span>${r.status}</span>
+          <span class="radio ${r.selected ? 'checked' : ''}" onclick="state.active[${i}].selected=!state.active[${i}].selected;saveState();render()"></span>
+        </div>`).join('') : '<div class="empty-msg">Нет активных задач в очереди</div>'}
+    </div>
+
+    <div class="section">
+      <div class="sec-head"><span>Прерванные процессы (${state.aborted.length})</span><button class="btn-sm btn-cyan" onclick="restartSelected()">Перезапустить выбр.</button></div>
+      <div class="tbl-head"><span>№</span><span>Документ</span><span>Автор</span><span>Причина</span><span></span><span></span></div>
+      ${state.aborted.length ? state.aborted.map((r, i) => `
+        <div class="tbl-row">
+          <span>${r.num}</span><span>${r.id}</span><span>👤 ${r.author}</span><span style="grid-column:span 2">${r.reason}</span>
+          <span class="radio cyan ${r.selected ? 'checked' : ''}" onclick="state.aborted[${i}].selected=!state.aborted[${i}].selected;saveState();render()"></span>
+        </div>`).join('') : '<div class="empty-msg">Прерванных процессов нет</div>'}
+    </div>
+
+    <div class="section">
+      <div class="sec-head"><span>Завершенные процессы (${state.completed.length})</span><button class="btn-sm btn-cyan" onclick="downloadResults()">Скачать результаты</button></div>
+      <div class="tbl-head"><span>№</span><span>Документ</span><span>Автор</span><span>Заверш.</span><span>risk_score</span><span></span></div>
+      ${state.completed.length ? state.completed.map(r => `
+        <div class="tbl-row">
+          <span>${r.num}</span><span>${r.id}</span><span>👤 ${r.author}</span><span>${r.finished}</span><span><b>${r.riskScore ?? '—'}</b></span><span></span>
+        </div>`).join('') : '<div class="empty-msg">Завершённых расчётов пока нет</div>'}
+    </div>`;
+}
+
+function renderNewTask() {
+  const risks = Object.keys(RISK_TYPES);
+  const currentRiskInfo = RISK_TYPES[state.form.process] || RISK_TYPES['Кредитный'];
+
+  return `
+    <div class="header-bar" style="justify-content:center">Параметры и запуск процесса</div>
+    <div class="form-card">
+      <div class="seg-group">
+        <div class="seg-title">Инициатор (выберите аналитика)</div>
+        <div class="chips">
+          ${USERS.map(u => `<button class="chip ${state.form.author===u?'active':''}" onclick="state.form.author='${u}';saveState();render()">👤 ${u}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="seg-group">
+        <div class="seg-title">Вид документа / витрины данных (из БД)</div>
+        <div class="chips">
+          ${DOCUMENTS.map(d => `<button class="chip ${state.form.document===d.id?'active':''}" onclick="state.form.document='${d.id}';state.form.process='${d.defaultRisk}';saveState();render()">📄 ${d.id}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="field-row">
+        <span>Операционная дата (в БД: 2026-11-24, 2026-11-25):</span>
+        <input type="date" value="${state.form.date}" onchange="state.form.date=this.value;saveState()">
+      </div>
+
+      <div class="seg-group">
+        <div class="seg-title">Тип риска (входит в ключ дедупликации)</div>
+        <div class="seg-btns">${risks.map(r => `<button class="seg-btn ${state.form.process===r?'active':''}" onclick="state.form.process='${r}';saveState();render()">${r}</button>`).join('')}</div>
+        <div class="risk-desc">${currentRiskInfo.desc}</div>
+      </div>
+
+      <div class="seg-group">
+        <div class="seg-title">Режим запуска (очередь приоритетов)</div>
+        <div class="seg-btns">
+          <button class="seg-btn ${state.form.priority==='manual'?'active':''}" onclick="state.form.priority='manual';saveState();render()">Ручной (Высокий приоритет)</button>
+          <button class="seg-btn ${state.form.priority==='auto'?'active':''}" onclick="state.form.priority='auto';saveState();render()">Автоматический (Низкий приоритет)</button>
+        </div>
+      </div>
+
+      <button class="btn-submit" onclick="submitForm()">▶ Инициировать асинхронный расчет</button>
+    </div>`;
+}
+
+function renderSettings() {
+  return `
+    <div class="header-bar">Настройки оркестратора</div>
+    <div class="form-card">
+      <div class="field-row">
+        <span>Адрес C++ API:</span>
+        <input value="${state.apiUrl}" onchange="state.apiUrl=this.value;saveState()">
+      </div>
+      <div class="seg-group">
+        <div class="seg-title">Режим работы интерфейса</div>
+        <div class="seg-btns">
+          <button class="seg-btn ${state.mode==='real'?'active':''}" onclick="switchMode('real')">Реальный сервер (C++ API)</button>
+          <button class="seg-btn ${state.mode==='demo'?'active':''}" onclick="switchMode('demo')">Демо-данные (оффлайн)</button>
+        </div>
+      </div>
+      <button class="btn-sm btn-red" style="padding:10px" onclick="resetHistory()">🗑 Очистить локальную историю задач</button>
+    </div>`;
+}
+
+function render() {
+  renderNav();
+  updateStatusBadge();
+  const container = document.getElementById('viewContainer');
+  if (state.tab === 'new') container.innerHTML = renderNewTask();
+  else if (state.tab === 'dashboard') container.innerHTML = renderDashboard();
+  else container.innerHTML = renderSettings();
+}
+
+render();
+pollServerAndTasks();
+setInterval(pollServerAndTasks, 2500);
+</script>
+</body>
+</html>

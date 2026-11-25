@@ -14,6 +14,17 @@ namespace orch
                     const PriorityQueue<ProcessTask>& process_queue)
     {
         httplib::Server server;
+        // Разрешаем запросы из браузера (CORS)
+        server.set_default_headers({
+            {"Access-Control-Allow-Origin", "*"},
+            {"Access-Control-Allow-Methods", "GET, POST, OPTIONS"},
+            {"Access-Control-Allow-Headers", "Content-Type"}
+        });
+
+        // Обработка предварительных OPTIONS-запросов браузера
+        server.Options(".*", [](const auto&, auto& res) {
+            res.status = 204;
+        });
         server.Get("/queue", [&](const auto&, auto& res) {
             const auto keys = process_queue.Snapshot(&ProcessTask::dedup_key);
             const json response = {{"keys", keys}};

@@ -27,12 +27,48 @@
         }
     },
     {
+        "document": "corporate_loans",
+        "date": "2026-11-24",
+        "content": {
+            "portfolio_sum": 1150000,
+            "currency": "USD",
+            "segment": "corporate"
+        }
+    },
+    {
+        "document": "retail_credits",
+        "date": "2026-11-25",
+        "content": {
+            "portfolio_sum": 850000,
+            "currency": "RUB",
+            "segment": "retail"
+        }
+    },
+    {
         "document": "treasury_bonds",
-        "date": "2026-11-20",
+        "date": "2026-11-25",
         "content": {
             "portfolio_sum": 500000,
             "currency": "RUB",
             "segment": "market"
+        }
+    },
+    {
+        "document": "fx_positions",
+        "date": "2026-11-25",
+        "content": {
+            "portfolio_sum": 320000,
+            "currency": "EUR",
+            "segment": "market"
+        }
+    },
+    {
+        "document": "liquidity_buffer",
+        "date": "2026-11-25",
+        "content": {
+            "portfolio_sum": 950000,
+            "currency": "RUB",
+            "segment": "liquidity"
         }
     }
 ]
