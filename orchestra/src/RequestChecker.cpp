@@ -5,7 +5,7 @@
 namespace orch {
 
 RequestChecker::RequestChecker(
-    Logger&& logger, std::shared_ptr<PriorityQueue<Request>> incoming_queue,
+    Logger &&logger, std::shared_ptr<PriorityQueue<Request>> incoming_queue,
     std::shared_ptr<Queue<ProcessTask>> process_queue,
     std::shared_ptr<IResponseCache> response_cache,
     std::shared_ptr<IRecipientRegistry> recipient_registry,
@@ -30,7 +30,7 @@ void RequestChecker::ThreadJob() {
   HandleRequest(req_opt.value());
 }
 
-void RequestChecker::HandleRequest(Request& req) {
+void RequestChecker::HandleRequest(Request &req) {
   LOG_DEBUG("Received request id=", req.id, " from author=", req.author);
 
   if (_cancellation_manager->IsCancelled(req.id)) {
@@ -42,43 +42,12 @@ void RequestChecker::HandleRequest(Request& req) {
 
   std::string dedup_key = req.getDedupKey();
 
-  // Если запрос закрыт из кэша или присоединён к уже идущему расчёту — выходим
-  if (TryServeFromCacheOrJoin(req, dedup_key)) {
-    return;
-  }
-
   // Иначе читаем данные и отправляем задачу в очередь процессов
   PrepareAndEnqueueTask(req, dedup_key);
 }
 
-bool RequestChecker::TryServeFromCacheOrJoin(const Request& req,
-                                             const std::string& dedup_key) {
-  std::lock_guard<std::mutex> lock(_state_mutex);
-
-  if (auto cached = _response_cache->Get(dedup_key); cached.has_value()) {
-    LOG_INFO("Cache hit for key=", dedup_key, ", author=", req.author);
-    _user_notifier->Notify(req.author, {{"request_id", req.id},
-                                        {"status", "completed"},
-                                        {"from_cache", true},
-                                        {"data", cached.value()}});
-    return true;
-  }
-
-  if (_recipient_registry->RegisterOrJoin(dedup_key, req.author)) {
-    LOG_INFO("Joined active calculation for key=", dedup_key,
-             ", author=", req.author);
-    _user_notifier->Notify(req.author,
-                           {{"request_id", req.id},
-                            {"status", "in_progress"},
-                            {"message", "Calculation already running"}});
-    return true;
-  }
-
-  return false;
-}
-
-void RequestChecker::PrepareAndEnqueueTask(Request& req,
-                                           const std::string& dedup_key) {
+void RequestChecker::PrepareAndEnqueueTask(Request &req,
+                                           const std::string &dedup_key) {
   try {
     LOG_DEBUG("Reading data for doc=", req.document, " date=", req.date);
     json raw_data = _data_reader->ReadData(req.document, req.date);
@@ -94,7 +63,7 @@ void RequestChecker::PrepareAndEnqueueTask(Request& req,
     _process_queue->Push(std::move(task));
     LOG_INFO("Task pushed to process queue, key=", dedup_key);
 
-  } catch (const std::exception& ex) {
+  } catch (const std::exception &ex) {
     LOG_ERROR("Data read failed for key=", dedup_key, ": ", ex.what());
     NotifyAllWaiting(
         dedup_key,
@@ -102,12 +71,12 @@ void RequestChecker::PrepareAndEnqueueTask(Request& req,
   }
 }
 
-void RequestChecker::NotifyAllWaiting(const std::string& dedup_key,
-                                      const json& payload) {
+void RequestChecker::NotifyAllWaiting(const std::string &dedup_key,
+                                      const json &payload) {
   auto waiting_authors = _recipient_registry->ExtractAll(dedup_key);
-  for (const auto& author : waiting_authors) {
+  for (const auto &author : waiting_authors) {
     _user_notifier->Notify(author, payload);
   }
 }
 
-}  // namespace orch
+} // namespace orch
