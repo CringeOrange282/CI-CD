@@ -34,8 +34,7 @@ public:
   void HandleExternalError(const std::string &dedup_key,
                            const std::string &error_message);
 
-  // 3. Взять готовый ответ из кэша (для модуля проверки запросов
-  // RequestChecker)
+  // 3. Взять готовый ответ из кэша.
   std::optional<json> GetCachedResponse(const std::string &dedup_key) const;
 
 private:

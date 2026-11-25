@@ -12,7 +12,7 @@ ExternalResponseHandler::ExternalResponseHandler(
 
 void ExternalResponseHandler::HandleExternalSuccess(
     const std::string &dedup_key, const json &result_data) {
-  LOG_INFO("Received successful response for key=", dedup_key);
+  LOG_INFO("Received successful response for key=" << dedup_key);
 
   // 1. Сначала сохраняем в кэш, чтобы все последующие запросы сразу брали
   // оттуда
@@ -29,8 +29,8 @@ void ExternalResponseHandler::HandleExternalSuccess(
 
 void ExternalResponseHandler::HandleExternalError(
     const std::string &dedup_key, const std::string &error_message) {
-  LOG_ERROR("Received error from external service for key=", dedup_key, ": ",
-            error_message);
+  LOG_ERROR("Received error from external service for key="
+            << dedup_key << ": " << error_message);
 
   // Ошибку в кэш НЕ сохраняем, но обязательно уведомляем всех ждущих и очищаем
   // подписку
@@ -48,7 +48,7 @@ ExternalResponseHandler::GetCachedResponse(const std::string &dedup_key) const {
 void ExternalResponseHandler::SaveToCache(const std::string &dedup_key,
                                           const json &result_data) {
   _cache->Put(dedup_key, result_data);
-  LOG_DEBUG("Saved response to cache for key=", dedup_key);
+  LOG_DEBUG("Saved response to cache for key=" << dedup_key);
 }
 
 void ExternalResponseHandler::BroadcastToSubscribers(
@@ -57,12 +57,12 @@ void ExternalResponseHandler::BroadcastToSubscribers(
       _recipient_registry->ExtractSubscribers(dedup_key);
 
   if (subscribers.empty()) {
-    LOG_WARN("No active subscribers found for key=", dedup_key);
+    LOG_WARN("No active subscribers found for key=" << dedup_key);
     return;
   }
 
-  LOG_DEBUG("Broadcasting response for key=", dedup_key, " to ",
-            subscribers.size(), " subscribers");
+  LOG_DEBUG("Broadcasting response for key=" << dedup_key << " to "
+            << subscribers.size() << " subscribers");
   for (const auto &author : subscribers) {
     _user_notifier->Notify(author, payload);
   }

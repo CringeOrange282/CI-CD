@@ -1,6 +1,6 @@
 #pragma once
 
-#include "json.hpp"
+#include "Interfaces.h"
 #include <optional>
 #include <shared_mutex>
 #include <string>
@@ -10,14 +10,14 @@ namespace orch {
 
 using json = nlohmann::json;
 
-class ExternalResponseCache {
+class ExternalResponseCache : public IResponseCache {
 public:
   ExternalResponseCache() = default;
-  ~ExternalResponseCache() = default;
+  ~ExternalResponseCache() override = default;
 
   // Взять ответ из кэша по ключу (потокобезопасно, разрешает параллельное
   // чтение)
-  std::optional<json> Get(const std::string &dedup_key) const;
+  std::optional<json> Get(const std::string &dedup_key) const override;
 
   // Сохранить или обновить ответ в кэше (эксклюзивная блокировка)
   void Put(const std::string &dedup_key, const json &response);

@@ -7,6 +7,7 @@
 #include "CalculateRequestMaker.h"
 #include "CalculateServiceSender.h"
 #include "DummyClasses.h"
+#include "ExternalResponseCache.h"
 #include "Service.h"
 
 int main(int argc, char *argv[]) {
@@ -27,8 +28,9 @@ int main(int argc, char *argv[]) {
 
   try {
     auto queue = std::make_shared<orch::Queue<orch::ProcessTask>>();
+    auto response_cache = std::make_shared<orch::ExternalResponseCache>();
     orch::CalculateRequestMaker request_maker(
-        orch::Logger("CalculateRequestMaker"), queue, orch::MakeDummyCache(),
+        orch::Logger("CalculateRequestMaker"), queue, response_cache,
         orch::MakeDummyRegistry(), orch::MakeDummyReader());
     orch::CalculateServiceSender sender(
         orch::Logger("CalculateServiceSender"), queue, argv[3], argv[4]);

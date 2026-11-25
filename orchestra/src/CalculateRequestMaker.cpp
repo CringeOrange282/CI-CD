@@ -41,7 +41,7 @@ json CalculateRequestMaker::ProcessRequest(const Request &req) {
       response = {{"request_id", req.id}, {"enqueued", false},
                   {"status", "cached"}, {"result", std::move(*result)}};
       if (registered_new_task) {
-        _recipient_registry->ExtractAll(dedup_key);
+        _recipient_registry->ExtractSubscribers(dedup_key);
       }
       return response;
     }
@@ -54,7 +54,7 @@ json CalculateRequestMaker::ProcessRequest(const Request &req) {
     _process_queue->Push(ProcessTask{req, dedup_key, std::move(raw_data)});
   } catch (const std::exception &ex) {
     if (registered_new_task) {
-      _recipient_registry->ExtractAll(dedup_key);
+      _recipient_registry->ExtractSubscribers(dedup_key);
     }
     LOG_ERROR("Failed to prepare or enqueue task, key="
               << dedup_key << ": " << ex.what());

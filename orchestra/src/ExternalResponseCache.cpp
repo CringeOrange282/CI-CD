@@ -1,5 +1,7 @@
 #include "ExternalResponseCache.h"
 
+#include <mutex>
+
 namespace orch {
 
 std::optional<json>

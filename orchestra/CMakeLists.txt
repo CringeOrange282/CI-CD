@@ -4,6 +4,8 @@ set(SOURCES
     src/CalculateRequestMaker.cpp
     src/CalculateServiceSender.cpp
     src/DummyClasses.cpp
+    src/ExternalResponseCache.cpp
+    src/ExternalResponseHandler.cpp
     src/HTTPServer.cpp
     src/Logger.cpp
     src/Utils.cpp
