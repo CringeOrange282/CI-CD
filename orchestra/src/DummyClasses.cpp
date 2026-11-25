@@ -1,5 +1,7 @@
 #include "DummyClasses.h"
 
+#include <unordered_map>
+
 namespace orch {
 
 // Минимальные заглушки для запуска
@@ -29,18 +31,6 @@ public:
   }
 };
 
-class DummyReader : public IDataReader {
-public:
-  json ReadData(const std::string &doc, const std::string &date) override {
-    return {{"doc", doc}, {"date", date}, {"portfolio_sum", 1500000}};
-  }
-};
-
-class DummyCancel : public ICancellationManager {
-public:
-  bool IsCancelled(const std::string &) const override { return false; }
-};
-
 class DummyNotifier : public IUserNotifier {
 public:
   void Notify(const std::string &author, const json &payload) override {
@@ -48,5 +38,17 @@ public:
               << std::endl;
   }
 };
+
+std::shared_ptr<IResponseCache> MakeDummyCache() {
+  return std::make_shared<DummyCache>();
+}
+
+std::shared_ptr<IRecipientRegistry> MakeDummyRegistry() {
+  return std::make_shared<DummyRegistry>();
+}
+
+std::shared_ptr<IUserNotifier> MakeDummyNotifier() {
+  return std::make_shared<DummyNotifier>();
+}
 
 } // namespace orch

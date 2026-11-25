@@ -1,5 +1,6 @@
 #include "RecipientList.h"
 #include <algorithm>
+#include <utility>
 
 RecipientList& RecipientList::GetInstance() {
     static RecipientList instance;
@@ -40,5 +41,18 @@ std::vector<std::string> RecipientList::GetSubscribers(const std::string& dedup_
 void RecipientList::RemoveRequest(const std::string& dedup_key) {
     std::lock_guard<std::mutex> lock(mtx_);
     active_requests_.erase(dedup_key);
+}
+
+bool RecipientList::RegisterOrJoin(const std::string& dedup_key, const std::string& author) {
+    return !AddSubscriber(dedup_key, author);
+}
+
+std::vector<std::string> RecipientList::ExtractSubscribers(const std::string& dedup_key) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    auto request = active_requests_.extract(dedup_key);
+    if (request.empty()) {
+        return {};
+    }
+    return std::move(request.mapped());
 }
 

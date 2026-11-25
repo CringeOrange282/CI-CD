@@ -1,7 +1,17 @@
 set(SOURCES
     src/main.cpp
     src/AsyncComponentBase.cpp
+    src/CalculateCanceler.cpp
+    src/CalculateRequestMaker.cpp
+    src/CalculateServiceSender.cpp
+    src/DummyClasses.cpp
+    src/ExternalResponseCache.cpp
+    src/ExternalResponseHandler.cpp
+    src/HTTPServer.cpp
+    src/JsonDatabase.cpp
+    src/LoadChecker.cpp
     src/Logger.cpp
+    src/Notifier.cpp
     src/Utils.cpp
     src/RecipientList.cpp
     src/request.cpp

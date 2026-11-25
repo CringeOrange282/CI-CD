@@ -1,0 +1,381 @@
+openapi: 3.1.0
+info:
+  title: Orchestra API
+  version: '1.0.0'
+  description: |
+    Orchestra принимает заявки, ставит расчёты в очередь и отправляет их
+    вычислительному сервису. Успешные результаты хранятся в памяти Orchestra.
+    Исходящие запросы к сервису расчётов и получателю уведомлений описаны
+    в разделе webhooks. Адреса получателей задаются при запуске Orchestra.
+servers:
+  - url: http://127.0.0.1:8080
+    description: Пример локального запуска Orchestra
+
+paths:
+  /add_task:
+    post:
+      operationId: addTask
+      summary: Запросить расчёт
+      description: |
+        Ключ расчёта формируется из операции, документа и даты. При совпадении
+        ключа с ожидающим или уже запущенным расчётом автор подписывается на его
+        результат. Если результат есть в кеше, он возвращается сразу.
+        Для нового расчёта Orchestra читает исходные данные по документу и дате.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+            example:
+              id: demo-1
+              author: alice
+              date: '2026-11-25'
+              document: portfolio
+              process: calculate-risk
+              priority: manual
+      responses:
+        '200':
+          description: Состояние заявки. Ошибка подготовки возвращается со статусом failed.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Enqueued'
+                  - $ref: '#/components/schemas/InProgress'
+                  - $ref: '#/components/schemas/Cached'
+                  - $ref: '#/components/schemas/PreparationFailed'
+              examples:
+                enqueued:
+                  value: {request_id: demo-1, enqueued: true, status: enqueued}
+                inProgress:
+                  value: {request_id: demo-2, enqueued: false, status: in_progress}
+                cached:
+                  value:
+                    request_id: demo-3
+                    enqueued: false
+                    status: cached
+                    result:
+                      key: '["calculate-risk","portfolio","2026-11-25"]'
+                      attempt_id: '2741915-3975313-1'
+                      status: Approve
+                      risk_score: 0.75
+                failed:
+                  value:
+                    request_id: demo-4
+                    enqueued: false
+                    status: failed
+                    error: "No input data for document 'portfolio' on 2026-11-25"
+        '400':
+          description: Некорректный JSON, пропущено обязательное поле или указан неверный тип.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enqueued, status]
+                properties:
+                  enqueued: {const: false}
+                  status: {const: invalid_request}
+              example: {enqueued: false, status: invalid_request}
+
+  /queue:
+    get:
+      operationId: getQueue
+      summary: Получить актуальный снимок очереди
+      description: |
+        Возвращает ключи ожидающих отправки расчётов. Сначала идут задачи
+        manual, затем auto. Внутри каждого приоритета действует порядок
+        поступления. Ключ исчезает из очереди, когда Sender забирает задачу.
+      responses:
+        '200':
+          description: Снимок очереди
+          headers:
+            Cache-Control:
+              schema: {type: string, const: no-store}
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [keys]
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DedupKey'
+              examples:
+                waiting:
+                  value:
+                    keys:
+                      - '["calculate-risk","portfolio","2026-11-25"]'
+                empty:
+                  value: {keys: []}
+
+  /result:
+    post:
+      operationId: receiveResult
+      summary: Принять результат от вычислительного сервиса
+      description: |
+        Поле key содержит dedup_key из запроса на запуск. Вычислительный
+        сервис возвращает полученный attempt_id. Orchestra принимает callback
+        без attempt_id для первой попытки по ключу в текущем процессе.
+        Успешный результат сохраняется целиком. При status failed подписчики
+        получают ошибку, после чего можно повторить расчёт.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SuccessfulResult'
+                - $ref: '#/components/schemas/FailedCallback'
+            examples:
+              completed:
+                value:
+                  key: '["calculate-risk","portfolio","2026-11-25"]'
+                  attempt_id: '2741915-3975313-1'
+                  status: Approve
+                  risk_score: 0.75
+              failed:
+                value:
+                  key: '["calculate-risk","portfolio","2026-11-25"]'
+                  attempt_id: '2741915-3975313-1'
+                  status: failed
+                  error: Undefined risk score
+      responses:
+        '200':
+          description: |
+            Callback корректен по формату. Ответ без тела. Запоздалые,
+            дублированные и не соответствующие активной попытке результаты
+            также получают 200 без изменения кеша или подписок.
+        '400':
+          description: Некорректный JSON или неверные поля callback. Ответ без тела.
+
+webhooks:
+  calculateSubmit:
+    post:
+      operationId: submitCalculation
+      summary: Отправить расчёт вычислительному сервису
+      description: |
+        Orchestra отправляет задачу, когда есть свободный слот. Путь задаёт
+        аргумент service-path при запуске Orchestra. Тестовый сервис принимает
+        запрос на /submit. При ошибке транспорта Orchestra ждёт callback или
+        таймаут, поскольку сервис мог принять задачу.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculateSubmission'
+            example:
+              dedup_key: '["calculate-risk","portfolio","2026-11-25"]'
+              attempt_id: '2741915-3975313-1'
+              name_process: calculate-risk
+              input_data:
+                doc: portfolio
+                date: '2026-11-25'
+                portfolio_sum: 30000
+      responses:
+        '200':
+          description: Сервис принял расчёт. Результат передаётся отдельным вызовом POST /result.
+        default:
+          description: Любой HTTP-статус кроме 200 завершает попытку с ошибкой.
+
+  calculateCancel:
+    post:
+      operationId: cancelCalculation
+      summary: Отменить попытку расчёта по таймауту
+      description: |
+        Orchestra отправляет запрос на cancel_path вычислительного сервиса.
+        Путь по умолчанию /cancel. Таймаут отсчитывается с отправки расчёта.
+        После попытки отмены Orchestra освобождает слот и уведомляет подписчиков
+        об ошибке Calculation timed out, в том числе при недоступности сервиса.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Attempt'
+            example:
+              dedup_key: '["calculate-risk","portfolio","2026-11-25"]'
+              attempt_id: '2741915-3975313-1'
+      responses:
+        '2XX':
+          description: Сервис подтвердил отмену.
+        default:
+          description: Ошибка отмены записывается в журнал Orchestra.
+
+  resultNotification:
+    post:
+      operationId: notifySubscribers
+      summary: Отправить результат всем подписчикам расчёта
+      description: |
+        При настроенном HTTP-получателе Notifier отправляет один POST для всей
+        группы подписчиков. Адрес и путь получателя задаются при запуске
+        Orchestra. При ошибке доставки повторной отправки нет.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+            examples:
+              completed:
+                value:
+                  'список получателей': [alice, bob]
+                  document: portfolio
+                  date: '2026-11-25'
+                  operation: calculate-risk
+                  result:
+                    key: '["calculate-risk","portfolio","2026-11-25"]'
+                    attempt_id: '2741915-3975313-1'
+                    status: Approve
+                    risk_score: 0.75
+              timedOut:
+                value:
+                  'список получателей': [alice, bob]
+                  document: portfolio
+                  date: '2026-11-25'
+                  operation: calculate-risk
+                  result:
+                    status: failed
+                    error: Calculation timed out
+      responses:
+        '2XX':
+          description: Получатель подтвердил доставку.
+        default:
+          description: Ошибка доставки записывается в журнал Orchestra.
+
+components:
+  schemas:
+    DedupKey:
+      type: string
+      minLength: 1
+      description: Строка с JSON-массивом из операции, документа и даты в этом порядке.
+      examples: ['["calculate-risk","portfolio","2026-11-25"]']
+    TaskRequest:
+      type: object
+      required: [author, date, document, process]
+      properties:
+        id:
+          type: string
+          default: ''
+          description: Идентификатор заявки, возвращается в request_id.
+        author:
+          type: string
+          description: Идентификатор подписчика.
+        date:
+          type: string
+          description: Строка даты для поиска в источнике данных.
+          examples: ['2026-11-25']
+        document: {type: string}
+        process:
+          type: string
+          description: Имя операции расчёта.
+        priority:
+          type: string
+          default: manual
+          description: manual задаёт высокий приоритет. Любая другая строка задаёт низкий.
+          examples: [manual, auto]
+        create_at:
+          type: string
+          default: ''
+          description: Необязательная отметка времени от клиента.
+    Enqueued:
+      type: object
+      required: [request_id, enqueued, status]
+      properties:
+        request_id: {type: string}
+        enqueued: {const: true}
+        status: {const: enqueued}
+    InProgress:
+      type: object
+      required: [request_id, enqueued, status]
+      properties:
+        request_id: {type: string}
+        enqueued: {const: false}
+        status: {const: in_progress}
+    Cached:
+      type: object
+      required: [request_id, enqueued, status, result]
+      properties:
+        request_id: {type: string}
+        enqueued: {const: false}
+        status: {const: cached}
+        result:
+          $ref: '#/components/schemas/SuccessfulResult'
+    PreparationFailed:
+      type: object
+      required: [request_id, enqueued, status, error]
+      properties:
+        request_id: {type: string}
+        enqueued: {const: false}
+        status: {const: failed}
+        error: {type: string}
+    CallbackIdentity:
+      type: object
+      required: [key]
+      properties:
+        key:
+          $ref: '#/components/schemas/DedupKey'
+        attempt_id: {type: string, minLength: 1}
+    SuccessfulResult:
+      allOf:
+        - $ref: '#/components/schemas/CallbackIdentity'
+        - type: object
+          description: Дополнительные поля результата зависят от операции.
+          required: [status]
+          properties:
+            status:
+              type: string
+              minLength: 1
+              not: {const: failed}
+              examples: [Approve, Disapprove]
+    FailedCallback:
+      allOf:
+        - $ref: '#/components/schemas/CallbackIdentity'
+        - $ref: '#/components/schemas/CalculationError'
+    CalculationError:
+      type: object
+      required: [status, error]
+      properties:
+        status: {const: failed}
+        error: {type: string}
+    Attempt:
+      type: object
+      required: [dedup_key, attempt_id]
+      properties:
+        dedup_key:
+          $ref: '#/components/schemas/DedupKey'
+        attempt_id:
+          type: string
+          minLength: 1
+          description: Идентификатор конкретной попытки расчёта.
+    CalculateSubmission:
+      allOf:
+        - $ref: '#/components/schemas/Attempt'
+        - type: object
+          required: [name_process, input_data]
+          properties:
+            name_process: {type: string}
+            input_data:
+              type: object
+              description: Поля записи из источника данных с добавленными doc и date.
+              required: [doc, date]
+              properties:
+                doc: {type: string}
+                date: {type: string}
+    Notification:
+      type: object
+      required: ['список получателей', document, date, operation, result]
+      properties:
+        'список получателей':
+          type: array
+          minItems: 1
+          items: {type: string}
+        document: {type: string}
+        date: {type: string}
+        operation: {type: string}
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/SuccessfulResult'
+            - $ref: '#/components/schemas/CalculationError'

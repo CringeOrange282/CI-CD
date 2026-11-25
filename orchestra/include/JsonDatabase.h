@@ -16,11 +16,12 @@ public:
   ~JsonDatabase() override = default;
 
   // Реализация метода IDataReader
-  json ReadData(const std::string &document, const std::string &date) override;
+  std::optional<json> ReadData(const std::string &document,
+                               const std::string &date) override;
 
   // Запись или обновление документа за дату (для наполнения базы/тестов)
   void WriteData(const std::string &document, const std::string &date,
-                 const json &content) override;
+                 const json &content);
 
 private:
   json LoadArrayFromFile() const;

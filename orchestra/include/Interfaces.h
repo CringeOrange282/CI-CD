@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+using json = orch::Request::json;
+
 // =========================================================================
 // ИНТЕРФЕЙСЫ СОСЕДНИХ МОДУЛЕЙ (АБСТРАКТНЫЕ КЛАССЫ)
 // =========================================================================
@@ -46,4 +48,10 @@ public:
   virtual ~IUserNotifier() = default;
   virtual void Notify(const std::string &author,
                       const json &response_payload) = 0;
+  virtual void NotifyBatch(const std::vector<std::string> &authors,
+                           const json &response_payload) {
+    for (const auto &author : authors) {
+      Notify(author, response_payload);
+    }
+  }
 };
