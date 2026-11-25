@@ -1,0 +1,121 @@
+[
+    {
+        "author": "user_max",
+        "date": "2026-11-19",
+        "document": "transactions_daily",
+        "process": "MarketRisk_FX",
+        "priority": "auto"
+    },
+    {
+        "author": "system_scheduler",
+        "date": "2026-11-23",
+        "document": "loans_portfolio",
+        "process": "CreditRisk_Calc",
+        "priority": "manual"
+    },
+    {
+        "author": "user_max",
+        "date": "2026-11-19",
+        "document": "loans_portfolio",
+        "process": "Liquidity_Check",
+        "priority": "manual"
+    },
+    {
+        "author": "user_ivan",
+        "date": "2026-11-20",
+        "document": "currency_rates",
+        "process": "MarketRisk_FX",
+        "priority": "auto"
+    },
+    {
+        "author": "system_scheduler",
+        "date": "2026-11-21",
+        "document": "transactions_daily",
+        "process": "MarketRisk_FX",
+        "priority": "auto"
+    },
+    {
+        "author": "user_ivan",
+        "date": "2026-11-23",
+        "document": "transactions_daily",
+        "process": "CreditRisk_Calc",
+        "priority": "auto"
+    },
+    {
+        "author": "user_anna",
+        "date": "2026-11-20",
+        "document": "loans_portfolio",
+        "process": "Liquidity_Check",
+        "priority": "auto"
+    },
+    {
+        "author": "user_max",
+        "date": "2026-11-24",
+        "document": "loans_portfolio",
+        "process": "MarketRisk_FX",
+        "priority": "manual"
+    },
+    {
+        "author": "system_scheduler",
+        "date": "2026-11-21",
+        "document": "loans_portfolio",
+        "process": "CreditRisk_Calc",
+        "priority": "auto"
+    },
+    {
+        "author": "user_ivan",
+        "date": "2026-11-21",
+        "document": "loans_portfolio",
+        "process": "CreditRisk_Calc",
+        "priority": "auto"
+    },
+    {
+        "author": "user_ivan",
+        "date": "2026-11-21",
+        "document": "currency_rates",
+        "process": "MarketRisk_FX",
+        "priority": "auto"
+    },
+    {
+        "author": "user_anna",
+        "date": "2026-11-24",
+        "document": "transactions_daily",
+        "process": "MarketRisk_FX",
+        "priority": "manual"
+    },
+    {
+        "author": "user_ivan",
+        "date": "2026-11-24",
+        "document": "loans_portfolio",
+        "process": "MarketRisk_FX",
+        "priority": "manual"
+    },
+    {
+        "author": "user_anna",
+        "date": "2026-11-20",
+        "document": "currency_rates",
+        "process": "Liquidity_Check",
+        "priority": "auto"
+    },
+    {
+        "author": "user_anna",
+        "date": "2026-11-22",
+        "document": "loans_portfolio",
+        "process": "CreditRisk_Calc",
+        "priority": "manual"
+    },
+    {
+        "author": "user_vlad",
+        "date": "2026-11-24",
+        "document": "loans_portfolio",
+        "process": "CreditRisk_Calc",
+        "priority": "manual"
+    },
+    {
+        "author": "user_nikita",
+        "date": "2026-11-24",
+        "document": "loans_portfolio",
+        "process": "CreditRisk_Calc",
+        "priority": "auto"
+    }
+]
