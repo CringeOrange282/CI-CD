@@ -22,6 +22,7 @@ CalculateServiceSender::~CalculateServiceSender() {
 }
 
 void CalculateServiceSender::StartAsync(RunMode mode) {
+  LOG_DEBUG("Starting calculate service sender, endpoint=" << _endpoint);
   // Дождаться запуска потока, чтобы немедленная остановка не потерялась.
   AsyncComponentBase::Start(mode, true);
 }
@@ -33,19 +34,28 @@ void CalculateServiceSender::ThreadJob() {
   }
 
   try {
+    LOG_DEBUG("Dequeued calculate task, key=" << task->dedup_key
+              << ", process=" << task->request.name_process);
+
     const json payload = {
         {"dedup_key", task->dedup_key},
         {"input_data", std::move(task->input_data)},
         {"name_process", task->request.name_process},
     };
-    const auto response =
-        _client.Post(_endpoint, payload.dump(), "application/json");
+    const std::string body = payload.dump();
+
+    LOG_DEBUG("Sending POST " << _endpoint << ", key=" << task->dedup_key
+              << ", bytes=" << body.size());
+    const auto response = _client.Post(_endpoint, body, "application/json");
 
     if (!response) {
       LOG_ERROR("Calculate service POST failed, key=" << task->dedup_key
                 << ": " << httplib::to_string(response.error()));
     } else if (response->status != httplib::StatusCode::OK_200) {
       LOG_ERROR("Calculate service returned HTTP " << response->status
+                << ", key=" << task->dedup_key);
+    } else {
+      LOG_DEBUG("Calculate service accepted task, HTTP " << response->status
                 << ", key=" << task->dedup_key);
     }
   } catch (const std::exception &ex) {

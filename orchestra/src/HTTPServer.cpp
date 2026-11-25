@@ -26,6 +26,10 @@ namespace orch
                             "application/json");
         });
 
+        server.Post("/result", [&](const auto& req, auto& res) {
+            
+        });
+
         if (!server.bind_to_port(host, port)) {
             std::cerr << "Could not bind to " << host << ':' << port << '\n';
             return false;

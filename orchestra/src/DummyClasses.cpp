@@ -46,4 +46,16 @@ public:
   }
 };
 
+std::shared_ptr<IResponseCache> MakeDummyCache() {
+  return std::make_shared<DummyCache>();
+}
+
+std::shared_ptr<IRecipientRegistry> MakeDummyRegistry() {
+  return std::make_shared<DummyRegistry>();
+}
+
+std::shared_ptr<IDataReader> MakeDummyReader() {
+  return std::make_shared<DummyReader>();
+}
+
 } // namespace orch

@@ -3,6 +3,7 @@ set(SOURCES
     src/AsyncComponentBase.cpp
     src/CalculateRequestMaker.cpp
     src/CalculateServiceSender.cpp
+    src/DummyClasses.cpp
     src/HTTPServer.cpp
     src/Logger.cpp
     src/Utils.cpp
