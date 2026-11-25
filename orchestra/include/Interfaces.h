@@ -6,6 +6,8 @@
 #include <vector>
 #include "request.h"
 
+using json = orch::Request::json;
+
 // =========================================================================
 // ИНТЕРФЕЙСЫ СОСЕДНИХ МОДУЛЕЙ (АБСТРАКТНЫЕ КЛАССЫ)
 // =========================================================================
@@ -24,6 +26,7 @@ class IRecipientRegistry {
   // author
   virtual bool RegisterOrJoin(const std::string& dedup_key,
                               const std::string& author) = 0;
+  // После успешного расчёта сначала сохранить результат в кеше.
   virtual std::vector<std::string> ExtractAll(const std::string& dedup_key) = 0;
 };
 
