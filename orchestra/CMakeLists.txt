@@ -4,6 +4,7 @@ set(SOURCES
     src/Logger.cpp
     src/Utils.cpp
     src/RecipientList.cpp
+    src/request.cpp
 )
 
 add_executable(orchestra ${SOURCES})
