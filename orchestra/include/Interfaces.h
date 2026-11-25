@@ -33,8 +33,8 @@ public:
 class IDataReader {
 public:
   virtual ~IDataReader() = default;
-  virtual json ReadData(const std::string &document,
-                        const std::string &date) = 0;
+  virtual std::optional<json> ReadData(const std::string &document,
+                                       const std::string &date) = 0;
 };
 
 class ICancellationManager {
