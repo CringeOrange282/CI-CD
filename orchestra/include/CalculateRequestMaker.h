@@ -4,7 +4,7 @@
 
 #include "Interfaces.h"
 #include "Loggable.h"
-#include "Queue.h"
+#include "PriorityQueue.h"
 #include "request.h"
 
 
@@ -24,7 +24,7 @@ struct ProcessTask {
 class CalculateRequestMaker : public Loggable {
 public:
   CalculateRequestMaker(Logger &&logger,
-                        std::shared_ptr<Queue<ProcessTask>> process_queue,
+                        std::shared_ptr<PriorityQueue<ProcessTask>> process_queue,
                         std::shared_ptr<IResponseCache> response_cache,
                         std::shared_ptr<IRecipientRegistry> recipient_registry,
                         std::shared_ptr<IDataReader> data_reader);
@@ -32,7 +32,7 @@ public:
   json ProcessRequest(const Request &req);
 
 private:
-  std::shared_ptr<Queue<ProcessTask>> _process_queue;
+  std::shared_ptr<PriorityQueue<ProcessTask>> _process_queue;
   std::shared_ptr<IResponseCache> _response_cache;
   std::shared_ptr<IRecipientRegistry> _recipient_registry;
   std::shared_ptr<IDataReader> _data_reader;

@@ -7,7 +7,7 @@
 namespace orch {
 
 CalculateServiceSender::CalculateServiceSender(
-    Logger &&logger, std::shared_ptr<Queue<ProcessTask>> process_queue,
+    Logger &&logger, std::shared_ptr<PriorityQueue<ProcessTask>> process_queue,
     const std::string &service_origin, std::string endpoint)
     : AsyncComponentBase(std::move(logger)),
       _process_queue(std::move(process_queue)),

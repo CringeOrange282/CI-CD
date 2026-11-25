@@ -24,25 +24,49 @@ cmake --build build --config Debug --target orchestra
 ```bash
 python3 -u - <<'PY'
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Event
+
+priority_started = Event()
+priority_release = Event()
 
 
 class Receiver(BaseHTTPRequestHandler):
+    def reply(self, status):
+        self.send_response(status)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_GET(self):
+        if self.path != "/priority/ready":
+            self.send_error(404)
+            return
+        self.reply(200 if priority_started.wait(timeout=10) else 504)
+
     def do_POST(self):
+        if self.path == "/priority/release":
+            priority_release.set()
+            self.reply(204)
+            return
+
         sender = {"/submit": "Sender", "/notify": "Notifier"}.get(self.path)
         if sender is None:
             self.send_error(404)
             return
 
         body = self.rfile.read(int(self.headers["Content-Length"]))
+        payload = json.loads(body)
         print(f"\n{sender} POST {self.path}")
-        print(json.dumps(json.loads(body), indent=2, ensure_ascii=False))
-        self.send_response(200)
-        self.send_header("Content-Length", "0")
-        self.end_headers()
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        if self.path == "/submit" and payload["name_process"] == "priority-gate":
+            priority_started.set()
+            if not priority_release.wait(timeout=25):
+                self.reply(504)
+                return
+        self.reply(200)
 
 
-with HTTPServer(("127.0.0.1", 9000), Receiver) as server:
+with ThreadingHTTPServer(("127.0.0.1", 9000), Receiver) as server:
     print("Приёмник слушает http://127.0.0.1:9000")
     server.serve_forever()
 PY
@@ -164,4 +188,37 @@ Orchestra отвечает `HTTP 200` со статусом `failed`. В Python-
 }
 ```
 
-После проверки остановите оба процесса сочетанием `Ctrl+C`.
+### 8. Проверьте порядок приоритетов
+
+Оставьте оба процесса запущенными и выполните блок целиком в терминале с `curl`. Первый запрос, `priority-gate`, занимает Sender. Python-приёмник удерживает ответ на этот POST, пока остальные четыре задачи ставятся в очередь. Запрос к `/priority/ready` подтверждает, что первый POST уже у приёмника, а `/priority/release` позволяет Sender закончить отправку и перейти к выбору следующей задачи.
+
+```bash
+(
+  set -e
+
+  add_priority_task() {
+    curl -fsS http://127.0.0.1:8080/add_task \
+      -H 'Content-Type: application/json' \
+      --data "{\"id\":\"$1\",\"author\":\"alice\",\"date\":\"2026-11-25\",\"document\":\"portfolio\",\"process\":\"$1\",\"priority\":\"$2\"}"
+    printf '\n'
+  }
+
+  add_priority_task priority-gate auto
+  curl -fsS http://127.0.0.1:9000/priority/ready
+  add_priority_task priority-low-1 auto
+  add_priority_task priority-high-1 manual
+  add_priority_task priority-low-2 auto
+  add_priority_task priority-high-2 manual
+  curl -fsS -X POST http://127.0.0.1:9000/priority/release
+)
+```
+
+Все пять заявок возвращают `"status":"enqueued"`. В терминале Python-приёмника новые запросы `Sender POST /submit` идут в следующем порядке по полю `name_process`.
+
+1. `priority-gate` — POST, который Sender уже начал.
+2. `priority-high-1` — первая задача с `manual`.
+3. `priority-high-2` — вторая задача с `manual`.
+4. `priority-low-1` — первая ожидающая задача с `auto`.
+5. `priority-low-2` — вторая ожидающая задача с `auto`.
+
+В этом сценарии проверяется порядок POST от Sender, поэтому достаточно ответов приёмника. Для повторного прогона с теми же ключами перезапустите оба процесса. После проверки остановите их сочетанием `Ctrl+C`.

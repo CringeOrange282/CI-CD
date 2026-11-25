@@ -7,7 +7,7 @@ namespace orch {
 
 CalculateRequestMaker::CalculateRequestMaker(
     Logger &&logger,
-    std::shared_ptr<Queue<ProcessTask>> process_queue,
+    std::shared_ptr<PriorityQueue<ProcessTask>> process_queue,
     std::shared_ptr<IResponseCache> response_cache,
     std::shared_ptr<IRecipientRegistry> recipient_registry,
     std::shared_ptr<IDataReader> data_reader)
@@ -56,7 +56,8 @@ json CalculateRequestMaker::ProcessRequest(const Request &req) {
     response = {{"request_id", req.id}, {"enqueued", true},
                 {"status", "enqueued"}};
 
-    _process_queue->Push(ProcessTask{req, dedup_key, std::move(*raw_data)});
+    _process_queue->Push(ProcessTask{req, dedup_key, std::move(*raw_data)},
+                         req.priority);
   } catch (const std::exception &ex) {
     if (registered_new_task) {
       _recipient_registry->ExtractSubscribers(dedup_key);

@@ -13,7 +13,7 @@ namespace orch {
 class CalculateServiceSender : public AsyncComponentBase {
 public:
   CalculateServiceSender(Logger &&logger,
-                         std::shared_ptr<Queue<ProcessTask>> process_queue,
+                         std::shared_ptr<PriorityQueue<ProcessTask>> process_queue,
                          const std::string &service_origin, std::string endpoint);
   ~CalculateServiceSender() override;
 
@@ -23,7 +23,7 @@ protected:
   void ThreadJob() override;
 
 private:
-  std::shared_ptr<Queue<ProcessTask>> _process_queue;
+  std::shared_ptr<PriorityQueue<ProcessTask>> _process_queue;
   httplib::Client _client;
   std::string _endpoint;
 };

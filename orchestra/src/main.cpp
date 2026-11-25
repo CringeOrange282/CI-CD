@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
 
   try {
-    auto queue = std::make_shared<orch::Queue<orch::ProcessTask>>();
+    auto queue = std::make_shared<orch::PriorityQueue<orch::ProcessTask>>();
     auto response_cache = std::make_shared<orch::ExternalResponseCache>();
     const char *data_file = std::getenv("ORCHESTRA_DATA_FILE");
     auto data_reader = std::make_shared<orch::JsonDatabase>(

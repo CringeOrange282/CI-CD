@@ -1,75 +1,84 @@
 #pragma once
 
-#include "Queue.h"
 #include "request.h"
 
-namespace orch{
+#include <chrono>
+#include <concepts>
+#include <condition_variable>
+#include <cstddef>
+#include <mutex>
+#include <optional>
+#include <queue>
+#include <utility>
+
+namespace orch {
+
 template <typename T>
 class PriorityQueue {
-private:
-    Queue<T> low_queue;
-    Queue<T> high_queue;
 public:
-    bool Empty()const;
-    void Push(const Request&);
-    std::optional<Request> Pop();
-    std::optional<Request> WaitAndPop(std::chrono::milliseconds timeout);
-    
-    size_t sizeTotal()const;
-    size_t sizeHigh()const;
-    size_t sizeLow()const;
+    bool Empty() const {
+        const std::lock_guard lock(_mutex);
+        return _high_queue.empty() && _low_queue.empty();
+    }
+
+    void Push(T value, RequestPriority priority) {
+        {
+            const std::lock_guard lock(_mutex);
+            auto &queue = priority == RequestPriority::High ? _high_queue : _low_queue;
+            queue.push(std::move(value));
+        }
+        _has_tasks.notify_one();
+    }
+
+    void Push(const Request &request) requires std::same_as<T, Request> {
+        Push(request, request.priority);
+    }
+
+    std::optional<T> Pop() {
+        const std::lock_guard lock(_mutex);
+        return PopUnlocked();
+    }
+
+    std::optional<T> WaitAndPop(std::chrono::milliseconds timeout) {
+        std::unique_lock lock(_mutex);
+        if (!_has_tasks.wait_for(lock, timeout, [this] {
+                return !_high_queue.empty() || !_low_queue.empty();
+            })) {
+            return std::nullopt;
+        }
+        return PopUnlocked();
+    }
+
+    std::size_t sizeTotal() const {
+        const std::lock_guard lock(_mutex);
+        return _high_queue.size() + _low_queue.size();
+    }
+
+    std::size_t sizeHigh() const {
+        const std::lock_guard lock(_mutex);
+        return _high_queue.size();
+    }
+
+    std::size_t sizeLow() const {
+        const std::lock_guard lock(_mutex);
+        return _low_queue.size();
+    }
+
+private:
+    std::optional<T> PopUnlocked() {
+        auto &queue = _high_queue.empty() ? _low_queue : _high_queue;
+        if (queue.empty()) {
+            return std::nullopt;
+        }
+        std::optional<T> value(std::in_place, std::move(queue.front()));
+        queue.pop();
+        return value;
+    }
+
+    mutable std::mutex _mutex;
+    std::condition_variable _has_tasks;
+    std::queue<T> _high_queue;
+    std::queue<T> _low_queue;
 };
 
-template<typename T>
-bool PriorityQueue<T>::Empty()const {
-    return low_queue.Empty() && high_queue.Empty();
-}
-
-template<typename T>
-void PriorityQueue<T>::Push(const Request& request) {
-    if (request.priority == RequestPriority::High) {
-        high_queue.Push(request);
-    }
-    else {
-        low_queue.Push(request);
-    }
-}
-
-template<typename T>
-std::optional<Request> PriorityQueue<T>::Pop() {
-    if (auto request = high_queue.Pop()) {
-        return request;
-    }
-    return low_queue.Pop();
-}
-
-template<typename T>
-std::optional<Request> PriorityQueue<T>::WaitAndPop(std::chrono::milliseconds timeout) {
-    auto start = std::chrono::steady_clock::now();
-    while (std::chrono::steady_clock::now() - start < timeout) {
-        if (auto request = high_queue.Pop()) {
-            return request;
-        }
-        if (auto request = low_queue.Pop()) {
-            return request;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    return std::nullopt;
-}
-
-template<typename T>
-size_t PriorityQueue<T>::sizeTotal()const {
-    return high_queue.Size() + low_queue.Size();
-}
-
-template<typename T>
-size_t PriorityQueue<T>::sizeHigh()const {
-    return high_queue.Size();
-}
-
-template<typename T>
-size_t PriorityQueue<T>::sizeLow()const {
-    return low_queue.Size();
-}
-}
+} // namespace orch
