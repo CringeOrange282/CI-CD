@@ -6,10 +6,13 @@
 #include <concepts>
 #include <condition_variable>
 #include <cstddef>
+#include <deque>
+#include <functional>
 #include <mutex>
 #include <optional>
-#include <queue>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace orch {
 
@@ -25,7 +28,7 @@ public:
         {
             const std::lock_guard lock(_mutex);
             auto &queue = priority == RequestPriority::High ? _high_queue : _low_queue;
-            queue.push(std::move(value));
+            queue.push_back(std::move(value));
         }
         _has_tasks.notify_one();
     }
@@ -64,6 +67,21 @@ public:
         return _low_queue.size();
     }
 
+    template <typename Projection>
+    auto Snapshot(Projection projection) const {
+        using Value = std::decay_t<std::invoke_result_t<Projection &, const T &>>;
+        const std::lock_guard lock(_mutex);
+        std::vector<Value> snapshot;
+        snapshot.reserve(_high_queue.size() + _low_queue.size());
+        for (const auto &item : _high_queue) {
+            snapshot.emplace_back(std::invoke(projection, item));
+        }
+        for (const auto &item : _low_queue) {
+            snapshot.emplace_back(std::invoke(projection, item));
+        }
+        return snapshot;
+    }
+
 private:
     std::optional<T> PopUnlocked() {
         auto &queue = _high_queue.empty() ? _low_queue : _high_queue;
@@ -71,14 +89,14 @@ private:
             return std::nullopt;
         }
         std::optional<T> value(std::in_place, std::move(queue.front()));
-        queue.pop();
+        queue.pop_front();
         return value;
     }
 
     mutable std::mutex _mutex;
     std::condition_variable _has_tasks;
-    std::queue<T> _high_queue;
-    std::queue<T> _low_queue;
+    std::deque<T> _high_queue;
+    std::deque<T> _low_queue;
 };
 
 } // namespace orch

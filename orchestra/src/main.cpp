@@ -135,7 +135,8 @@ int main(int argc, char *argv[]) {
     canceler.StartAsync();
     sender.StartAsync();
     
-    return orch::RunService(argv[1], port, request_maker, response_handler) ? 0 : 1;
+    return orch::RunService(argv[1], port, request_maker, response_handler, *queue)
+               ? 0 : 1;
 
   } catch (const std::exception &ex) {
     std::cerr << "Orchestra failed: " << ex.what() << '\n';

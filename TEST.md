@@ -233,3 +233,69 @@ Orchestra отвечает `HTTP 200` со статусом `failed`. В Python-
 5. `priority-low-2` — вторая ожидающая задача с `auto`.
 
 Для `priority-gate` приёмник отправляет callback и освобождает слот. Остальные четыре задачи занимают четыре слота с настройками по умолчанию. Для повторного прогона с теми же ключами перезапустите оба процесса. После проверки остановите их сочетанием `Ctrl+C`.
+
+## Автоматический расчёт и отмена через `service/fake_server.py`
+
+Остановите процессы из предыдущего сценария. Используйте ту же сборку и JSON-базу из шага 3. Команды запускайте из корня репозитория.
+
+В первом терминале установите зависимости в виртуальное окружение и запустите тестовый вычислительный сервис на порту `9001`.
+
+```bash
+python3 -m venv build/test-venv
+build/test-venv/bin/python -m pip install fastapi httpx uvicorn
+ORCHESTRA_CALLBACK_URL=http://127.0.0.1:8080/result \
+  build/test-venv/bin/python -m uvicorn service.fake_server:app \
+  --host 127.0.0.1 --port 9001
+```
+
+Во втором терминале запустите приёмник HTTP-уведомлений на порту `9000`.
+
+```bash
+python3 -u test_server.py
+```
+
+В терминале, где задана переменная `data_file` из шага 3, запустите Orchestra.
+
+```bash
+ORCHESTRA_DATA_FILE="$data_file" ./build/bin/debug/orchestra 127.0.0.1 8080 \
+  http://127.0.0.1:9001 /submit \
+  http://127.0.0.1:9000 /notify
+```
+
+В другом терминале отправьте заявку.
+
+```bash
+curl -fsS http://127.0.0.1:8080/add_task \
+  -H 'Content-Type: application/json' \
+  --data '{"author":"alice","date":"2026-11-25","document":"portfolio","process":"calculate-risk"}'
+```
+
+Сразу придёт ответ со статусом `enqueued`. Примерно через пять секунд `fake_server.py` сам отправит `POST /result` с `attempt_id`. В терминале `test_server.py` появится `Notifier POST /notify` с результатом `Approve` и `risk_score: 0.75`. Повтор той же заявки вернёт `cached`.
+
+### Проверьте отмену по таймауту
+
+Остановите только Orchestra и запустите его снова с таймаутом в одну секунду. Тестовый сервис и приёмник уведомлений оставьте запущенными.
+
+```bash
+load_config=$(mktemp)
+cat > "$load_config" <<'JSON'
+{
+  "max_concurrent_requests": 1,
+  "request_timeout_ms": 1000,
+  "cancel_path": "/cancel"
+}
+JSON
+
+ORCHESTRA_CONFIG_FILE="$load_config" ORCHESTRA_DATA_FILE="$data_file" \
+  ./build/bin/debug/orchestra 127.0.0.1 8080 \
+  http://127.0.0.1:9001 /submit \
+  http://127.0.0.1:9000 /notify
+```
+
+Отправьте ту же заявку. Примерно через секунду в журнале Uvicorn появится успешный `POST /cancel`, а приёмник уведомлений покажет `"result":{"status":"failed","error":"Calculation timed out"}`. После уведомления проверьте, что у тестового сервиса нет активных задач.
+
+```bash
+curl -fsS http://127.0.0.1:9001/stats
+```
+
+Поле `count_tasks` должно быть равно `0`. Повтор той же заявки вернёт `enqueued` и запустит новую попытку.

@@ -10,9 +10,17 @@ namespace orch
 
     bool RunService(const std::string& host, int port,
                     CalculateRequestMaker& request_maker,
-                    ExternalResponseHandler& response_handler)
+                    ExternalResponseHandler& response_handler,
+                    const PriorityQueue<ProcessTask>& process_queue)
     {
         httplib::Server server;
+        server.Get("/queue", [&](const auto&, auto& res) {
+            const auto keys = process_queue.Snapshot(&ProcessTask::dedup_key);
+            const json response = {{"keys", keys}};
+            res.set_header("Cache-Control", "no-store");
+            res.set_content(response.dump(), "application/json");
+        });
+
         server.Post("/add_task", [&](const auto& req, auto& res) {
             Request task_req;
             try {
