@@ -22,7 +22,7 @@ public:
     active[key].push_back(author);
     return exists;
   }
-  std::vector<std::string> ExtractAll(const std::string &key) override {
+  std::vector<std::string> ExtractSubscribers(const std::string &key) override {
     auto res = std::move(active[key]);
     active.erase(key);
     return res;
