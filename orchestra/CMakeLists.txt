@@ -8,6 +8,7 @@ set(SOURCES
     src/ExternalResponseHandler.cpp
     src/HTTPServer.cpp
     src/Logger.cpp
+    src/Notifier.cpp
     src/Utils.cpp
     src/RecipientList.cpp
     src/request.cpp

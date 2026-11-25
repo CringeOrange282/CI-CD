@@ -58,4 +58,8 @@ std::shared_ptr<IDataReader> MakeDummyReader() {
   return std::make_shared<DummyReader>();
 }
 
+std::shared_ptr<IUserNotifier> MakeDummyNotifier() {
+  return std::make_shared<DummyNotifier>();
+}
+
 } // namespace orch

@@ -63,9 +63,7 @@ void ExternalResponseHandler::BroadcastToSubscribers(
 
   LOG_DEBUG("Broadcasting response for key=" << dedup_key << " to "
             << subscribers.size() << " subscribers");
-  for (const auto &author : subscribers) {
-    _user_notifier->Notify(author, payload);
-  }
+  _user_notifier->NotifyBatch(subscribers, payload);
 }
 
 } // namespace orch

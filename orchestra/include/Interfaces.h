@@ -48,4 +48,10 @@ public:
   virtual ~IUserNotifier() = default;
   virtual void Notify(const std::string &author,
                       const json &response_payload) = 0;
+  virtual void NotifyBatch(const std::vector<std::string> &authors,
+                           const json &response_payload) {
+    for (const auto &author : authors) {
+      Notify(author, response_payload);
+    }
+  }
 };
