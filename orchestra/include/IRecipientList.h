@@ -6,8 +6,9 @@ class IRecipientList {
 public:
     virtual ~IRecipientList() = default;
 
-    virtual bool addSubscriber(const std::string& dedupKey, const std::string& author) = 0;
-    virtual std::vector<std::string> getSubscribers(const std::string& dedupKey) const = 0;
-    virtual void removeSubscriber(const std::string& dedupKey, const std::string& author) = 0;
-    virtual void removeRequest(const std::string& dedupKey) = 0;
+    virtual bool AddSubscriber(const std::string& dedup_key, const std::string& author) = 0;
+    virtual bool FindRequest(const std::string& dedup_key) const = 0;
+    virtual std::vector<std::string> GetSubscribers(const std::string& dedup_key) const = 0;
+    virtual void RemoveRequest(const std::string& dedup_key) = 0;
 };
+

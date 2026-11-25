@@ -1,17 +1,17 @@
 #include "RecipientList.h"
 #include <algorithm>
 
-RecipientList& RecipientList::getInstance() {
+RecipientList& RecipientList::GetInstance() {
     static RecipientList instance;
     return instance;
 }
 
-bool RecipientList::addSubscriber(const std::string& dedupKey, const std::string& author) {
+bool RecipientList::AddSubscriber(const std::string& dedup_key, const std::string& author) {
     std::lock_guard<std::mutex> lock(mtx_);
 
-    auto it = activeRequests_.find(dedupKey);
-    if (it == activeRequests_.end()) {
-        activeRequests_[dedupKey] = { author };
+    auto it = active_requests_.find(dedup_key);
+    if (it == active_requests_.end()) {
+        active_requests_[dedup_key] = { author };
         return true;
     }
 
@@ -22,31 +22,23 @@ bool RecipientList::addSubscriber(const std::string& dedupKey, const std::string
     return false;
 }
 
-std::vector<std::string> RecipientList::getSubscribers(const std::string& dedupKey) const {
+bool RecipientList::FindRequest(const std::string& dedup_key) const {
+    std::lock_guard<std::mutex> lock(mtx_);
+    return active_requests_.find(dedup_key) != active_requests_.end();
+}
+
+std::vector<std::string> RecipientList::GetSubscribers(const std::string& dedup_key) const {
     std::lock_guard<std::mutex> lock(mtx_);
 
-    auto it = activeRequests_.find(dedupKey);
-    if (it != activeRequests_.end()) {
+    auto it = active_requests_.find(dedup_key);
+    if (it != active_requests_.end()) {
         return it->second;
     }
     return {};
 }
 
-void RecipientList::removeSubscriber(const std::string& dedupKey, const std::string& author) {
+void RecipientList::RemoveRequest(const std::string& dedup_key) {
     std::lock_guard<std::mutex> lock(mtx_);
-
-    auto it = activeRequests_.find(dedupKey);
-    if (it != activeRequests_.end()) {
-        auto& subscribers = it->second;
-        subscribers.erase(std::remove(subscribers.begin(), subscribers.end(), author), subscribers.end());
-
-        if (subscribers.empty()) {
-            activeRequests_.erase(it);
-        }
-    }
+    active_requests_.erase(dedup_key);
 }
 
-void RecipientList::removeRequest(const std::string& dedupKey) {
-    std::lock_guard<std::mutex> lock(mtx_);
-    activeRequests_.erase(dedupKey);
-}
