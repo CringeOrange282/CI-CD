@@ -31,13 +31,6 @@ public:
   }
 };
 
-class DummyReader : public IDataReader {
-public:
-  json ReadData(const std::string &doc, const std::string &date) override {
-    return {{"doc", doc}, {"date", date}, {"portfolio_sum", 1500000}};
-  }
-};
-
 class DummyNotifier : public IUserNotifier {
 public:
   void Notify(const std::string &author, const json &payload) override {
@@ -52,10 +45,6 @@ std::shared_ptr<IResponseCache> MakeDummyCache() {
 
 std::shared_ptr<IRecipientRegistry> MakeDummyRegistry() {
   return std::make_shared<DummyRegistry>();
-}
-
-std::shared_ptr<IDataReader> MakeDummyReader() {
-  return std::make_shared<DummyReader>();
 }
 
 std::shared_ptr<IUserNotifier> MakeDummyNotifier() {

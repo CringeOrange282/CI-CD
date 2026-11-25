@@ -1,6 +1,7 @@
 #include "CalculateRequestMaker.h"
 
 #include <exception>
+#include <stdexcept>
 
 namespace orch {
 
@@ -47,11 +48,15 @@ json CalculateRequestMaker::ProcessRequest(const Request &req) {
     }
 
     LOG_DEBUG("Reading data for doc=" << req.document << " date=" << req.date);
-    json raw_data = _data_reader->ReadData(req.document, req.date);
+    auto raw_data = _data_reader->ReadData(req.document, req.date);
+    if (!raw_data) {
+      throw std::runtime_error("No input data for document '" + req.document +
+                               "' on " + req.date);
+    }
     response = {{"request_id", req.id}, {"enqueued", true},
                 {"status", "enqueued"}};
 
-    _process_queue->Push(ProcessTask{req, dedup_key, std::move(raw_data)});
+    _process_queue->Push(ProcessTask{req, dedup_key, std::move(*raw_data)});
   } catch (const std::exception &ex) {
     if (registered_new_task) {
       _recipient_registry->ExtractSubscribers(dedup_key);

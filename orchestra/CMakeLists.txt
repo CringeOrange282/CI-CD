@@ -7,6 +7,7 @@ set(SOURCES
     src/ExternalResponseCache.cpp
     src/ExternalResponseHandler.cpp
     src/HTTPServer.cpp
+    src/JsonDatabase.cpp
     src/Logger.cpp
     src/Notifier.cpp
     src/Utils.cpp

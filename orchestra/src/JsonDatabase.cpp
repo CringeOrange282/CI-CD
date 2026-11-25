@@ -1,6 +1,10 @@
 #include "JsonDatabase.h"
+
+#include <filesystem>
 #include <fstream>
+#include <mutex>
 #include <stdexcept>
+#include <utility>
 
 namespace orch {
 
@@ -10,14 +14,22 @@ JsonDatabase::JsonDatabase(std::string file_path)
 
 json JsonDatabase::LoadArrayFromFile() const {
   std::ifstream file(_file_path);
-  // Если файла ещё не существует или он пуст — возвращаем пустой массив []
-  if (!file.is_open() || file.peek() == std::ifstream::traits_type::eof()) {
+  if (!file.is_open()) {
+    if (std::filesystem::exists(_file_path)) {
+      throw std::runtime_error("Cannot open data file: " + _file_path);
+    }
+    return json::array();
+  }
+  if (file.peek() == std::ifstream::traits_type::eof()) {
     return json::array();
   }
 
   json data;
   file >> data;
-  return data.is_array() ? data : json::array();
+  if (!data.is_array()) {
+    throw std::runtime_error("Expected an array in data file: " + _file_path);
+  }
+  return data;
 }
 
 void JsonDatabase::SaveArrayToFile(const json &records) const {
@@ -29,14 +41,21 @@ void JsonDatabase::SaveArrayToFile(const json &records) const {
 }
 
 std::optional<json> JsonDatabase::ReadData(const std::string &document,
-                                           const std::string &date) const {
+                                          const std::string &date) {
   std::shared_lock<std::shared_mutex> lock(_mutex);
   json records = LoadArrayFromFile();
 
-  for (const auto &item : records) {
+  for (auto &item : records) {
     if (item.value("document", "") == document &&
         item.value("date", "") == date) {
-      return item.value("content", json::object());
+      auto content = std::move(item.at("content"));
+      if (!content.is_object()) {
+        throw std::runtime_error("Expected an object in content for document: " +
+                                 document);
+      }
+      content["doc"] = document;
+      content["date"] = date;
+      return content;
     }
   }
   return std::nullopt;
@@ -44,6 +63,9 @@ std::optional<json> JsonDatabase::ReadData(const std::string &document,
 
 void JsonDatabase::WriteData(const std::string &document,
                              const std::string &date, const json &content) {
+  if (!content.is_object()) {
+    throw std::invalid_argument("Expected an object in content");
+  }
   std::unique_lock<std::shared_mutex> lock(_mutex);
   json records = LoadArrayFromFile();
 

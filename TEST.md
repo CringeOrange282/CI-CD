@@ -6,6 +6,8 @@
 
 В примере один Python-сервер принимает запросы от Sender на `/submit` и от Notifier на `/notify`. Результат расчёта отправляется вручную, чтобы успеть добавить второго подписчика.
 
+Если порт `8080` или `9000` уже занят, замените его на свободный во всех командах примера, включая код Python-приёмника.
+
 ### 1. Соберите Orchestra
 
 Выполните из корня репозитория.
@@ -46,12 +48,25 @@ with HTTPServer(("127.0.0.1", 9000), Receiver) as server:
 PY
 ```
 
-### 3. Запустите Orchestra
+### 3. Подготовьте данные и запустите Orchestra
 
-В другом терминале из корня репозитория запустите Orchestra. После адреса и порта Orchestra укажите адрес и путь для Sender, затем адрес и путь для Notifier.
+В другом терминале из корня репозитория создайте временную JSON-базу и укажите её путь при запуске Orchestra.
 
 ```bash
-./build/bin/debug/orchestra 127.0.0.1 8080 \
+data_file=$(mktemp)
+cat > "$data_file" <<'JSON'
+[
+  {
+    "document": "portfolio",
+    "date": "2026-11-25",
+    "content": {
+      "portfolio_sum": 30000
+    }
+  }
+]
+JSON
+
+ORCHESTRA_DATA_FILE="$data_file" ./build/bin/debug/orchestra 127.0.0.1 8080 \
   http://127.0.0.1:9000 /submit \
   http://127.0.0.1:9000 /notify
 ```
@@ -80,11 +95,13 @@ Orchestra отвечает `HTTP 200`. Поле `enqueued` подтвержда�
   "input_data": {
     "date": "2026-11-25",
     "doc": "portfolio",
-    "portfolio_sum": 1500000
+    "portfolio_sum": 30000
   },
   "name_process": "calculate-risk"
 }
 ```
+
+Проверьте, что в `input_data` пришли `portfolio_sum: 30000` из файла и метаданные выбранной записи.
 
 ### 5. Добавьте второго подписчика
 
@@ -125,5 +142,26 @@ Orchestra отвечает `HTTP 200`. В терминале Python-приёмн
 ```
 
 Повторите первый `POST /add_task`. Orchestra вернёт `"status":"cached"` и готовый расчёт в поле `result`. В терминале Python-приёмника останется по одному POST на каждый путь.
+
+### 7. Проверьте отсутствующую запись
+
+Запросите тот же документ за дату, которой нет в файле.
+
+```bash
+curl -sS -i http://127.0.0.1:8080/add_task \
+  -H 'Content-Type: application/json' \
+  --data '{"id":"demo-3","author":"alice","date":"2026-11-24","document":"portfolio","process":"calculate-risk"}'
+```
+
+Orchestra отвечает `HTTP 200` со статусом `failed`. В Python-приёмнике число запросов остаётся прежним.
+
+```json
+{
+  "enqueued": false,
+  "error": "No input data for document 'portfolio' on 2026-11-24",
+  "request_id": "demo-3",
+  "status": "failed"
+}
+```
 
 После проверки остановите оба процесса сочетанием `Ctrl+C`.
