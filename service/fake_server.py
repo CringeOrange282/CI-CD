@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Response
 from pydantic import BaseModel
 from datetime import date
 import time
 import asyncio
+import httpx
+
 app = FastAPI()
 
 start_time = time.time()
@@ -24,9 +26,12 @@ class UserInfo(BaseModel):
     credit_history_score:int
 
 
+
 class Request(BaseModel):
     user:UserInfo
     operations:Transaction
+
+callback_url = "localhost:8080/result"#URL Orhestrator
 
 active_requests = {}
 complete_requests = {}
@@ -48,8 +53,9 @@ async def add_request(request:Request,dedup_key:str):
         "time_complete":time.time() - active_requests.get(dedup_key).get("start_time_process")
     }
     active_requests.pop(dedup_key,None)
-    return result
-
+    async with httpx.AsyncClient() as client:
+        await client.post(request.callback_url,json=result)
+    return Response(status_code=202)
 
 @app.get("/stats")
 async def stats():

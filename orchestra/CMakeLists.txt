@@ -9,6 +9,7 @@ set(SOURCES
     src/HTTPServer.cpp
     src/Logger.cpp
     src/Utils.cpp
+    src/RecipientList.cpp
     src/request.cpp
 )
 
