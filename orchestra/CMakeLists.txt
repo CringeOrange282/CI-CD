@@ -3,6 +3,7 @@ set(SOURCES
     src/AsyncComponentBase.cpp
     src/Logger.cpp
     src/Utils.cpp
+    src/request.cpp
 )
 
 add_executable(orchestra ${SOURCES})

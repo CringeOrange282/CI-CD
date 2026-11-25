@@ -25,12 +25,13 @@ class UserInfo(BaseModel):
     client_type:str
     credit_history_score:int
 
+
+
 class Request(BaseModel):
     user:UserInfo
     operations:Transaction
 
 callback_url = "localhost:8080/result"#URL Orhestrator
-
 
 active_requests = {}
 complete_requests = {}
