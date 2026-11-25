@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Interfaces.h"
 #include "json.hpp"
 #include <optional>
 #include <shared_mutex>
@@ -9,15 +10,17 @@ namespace orch {
 
 using json = nlohmann::json;
 
-class JsonDatabase {
+class JsonDatabase : public IDataReader {
 public:
   explicit JsonDatabase(std::string file_path);
-  ~JsonDatabase() = default;
+  ~JsonDatabase() override = default;
 
-  std::optional<json> Read(const std::string &document,
-                           const std::string &date) const;
-  void Write(const std::string &document, const std::string &date,
-             const json &content);
+  // Реализация метода IDataReader
+  json ReadData(const std::string &document, const std::string &date) override;
+
+  // Запись или обновление документа за дату (для наполнения базы/тестов)
+  void WriteData(const std::string &document, const std::string &date,
+                 const json &content) override;
 
 private:
   json LoadArrayFromFile() const;

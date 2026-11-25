@@ -28,8 +28,8 @@ void JsonDatabase::SaveArrayToFile(const json &records) const {
   file << records.dump(4);
 }
 
-std::optional<json> JsonDatabase::Read(const std::string &document,
-                                       const std::string &date) const {
+std::optional<json> JsonDatabase::ReadData(const std::string &document,
+                                           const std::string &date) const {
   std::shared_lock<std::shared_mutex> lock(_mutex);
   json records = LoadArrayFromFile();
 
@@ -42,8 +42,8 @@ std::optional<json> JsonDatabase::Read(const std::string &document,
   return std::nullopt;
 }
 
-void JsonDatabase::Write(const std::string &document, const std::string &date,
-                         const json &content) {
+void JsonDatabase::WriteData(const std::string &document,
+                             const std::string &date, const json &content) {
   std::unique_lock<std::shared_mutex> lock(_mutex);
   json records = LoadArrayFromFile();
 
